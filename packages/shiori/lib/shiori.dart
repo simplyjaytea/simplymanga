@@ -26,6 +26,7 @@ export 'src/components/segmented_control.dart';
 export 'src/components/settings.dart';
 export 'src/components/sheet.dart';
 export 'src/components/skeleton.dart';
+export 'src/components/switcher.dart';
 export 'src/components/tab_indicator.dart';
 export 'src/components/toast.dart';
 export 'src/page_transitions.dart';

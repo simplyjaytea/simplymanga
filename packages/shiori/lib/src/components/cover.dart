@@ -54,6 +54,13 @@ class ShioriCover extends StatefulWidget {
 class _ShioriCoverState extends State<ShioriCover> {
   bool _focused = false;
 
+  /// Whether a pointer is down on the cover, observed without competing
+  /// with the gestures the cover already recognizes.
+  bool _pressed = false;
+
+  /// Whether a touch on this cover does anything at all.
+  bool get _actionable => widget.onTap != null || widget.onLongPress != null;
+
   void _onFocusChange(bool hasFocus, bool isTv) {
     widget.onFocusChange?.call(hasFocus);
     final show =
@@ -62,6 +69,12 @@ class _ShioriCoverState extends State<ShioriCover> {
             FocusManager.instance.highlightMode ==
                 FocusHighlightMode.traditional);
     if (mounted && show != _focused) setState(() => _focused = show);
+  }
+
+  void _setPressed(bool value) {
+    final pressed = value && _actionable;
+    if (_pressed == pressed) return;
+    setState(() => _pressed = pressed);
   }
 
   @override
@@ -143,24 +156,35 @@ class _ShioriCoverState extends State<ShioriCover> {
       label: widget.title,
       button: widget.onTap != null,
       selected: widget.selected,
-      child: AnimatedScale(
-        scale: _focused ? 1.06 : 1,
-        duration: ShioriMotion.of(context, ShioriMotion.fast),
-        curve: ShioriMotion.standardCurve,
-        child: AnimatedContainer(
+      child: Listener(
+        onPointerDown: (_) => _setPressed(true),
+        onPointerUp: (_) => _setPressed(false),
+        onPointerCancel: (_) => _setPressed(false),
+        child: AnimatedScale(
+          // A touch answers with weight; a focus ring, with a lift. A
+          // touch wins while it lasts.
+          scale: _pressed
+              ? ShioriMotion.pressedScale
+              : _focused
+              ? 1.06
+              : 1,
           duration: ShioriMotion.of(context, ShioriMotion.fast),
           curve: ShioriMotion.standardCurve,
-          // Outside the clip, so the ring is not cut off; the radius grows by
-          // the ring's width so the corners stay concentric.
-          foregroundDecoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(ShioriShape.cover + 3),
-            border: Border.all(
-              color: _focused ? c.accent : Colors.transparent,
-              width: 3,
-              strokeAlign: BorderSide.strokeAlignOutside,
+          child: AnimatedContainer(
+            duration: ShioriMotion.of(context, ShioriMotion.fast),
+            curve: ShioriMotion.standardCurve,
+            // Outside the clip, so the ring is not cut off; the radius grows by
+            // the ring's width so the corners stay concentric.
+            foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(ShioriShape.cover + 3),
+              border: Border.all(
+                color: _focused ? c.accent : Colors.transparent,
+                width: 3,
+                strokeAlign: BorderSide.strokeAlignOutside,
+              ),
             ),
+            child: card,
           ),
-          child: card,
         ),
       ),
     );
