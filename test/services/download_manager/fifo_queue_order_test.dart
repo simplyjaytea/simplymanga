@@ -46,6 +46,7 @@ void main() {
 
   setUp(() async {
     DownloadQueueOrder.resetArrivals();
+    DownloadGate.instance.reset();
     downloadsPaused.value = false;
     databaseDirectory = await Directory.systemTemp.createTemp(
       'mangayomi_fifo_queue_test_${math.Random().nextInt(1 << 32)}',
@@ -63,6 +64,7 @@ void main() {
 
   tearDown(() async {
     DownloadQueueOrder.resetArrivals();
+    DownloadGate.instance.reset();
     await database.close();
     await databaseDirectory.delete(recursive: true);
   });
@@ -273,11 +275,13 @@ void main() {
         delaySeconds: 0,
       );
       Future<void> run(int id) async {
-        final chapter = (await database.chapters.get(id))!;
-        chapter.manga.value = await database.mangas.get(id);
+        // All three chapters share `sourceKey`; acquire directly so waiters
+        // register deterministically. A per-chapter Isar read here completes
+        // at a load-dependent time, which made the hand-off assertion flake
+        // under full-suite parallelism even though it passed in isolation.
         await gate.acquire(
           id: id,
-          sourceKey: chapterSourceKey(chapter),
+          sourceKey: sourceKey,
           maxConcurrent: 3,
           delaySeconds: 0,
         );

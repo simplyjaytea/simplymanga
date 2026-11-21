@@ -160,6 +160,22 @@ class DownloadGate {
     }
   }
 
+  /// Test seam: returns the singleton gate to a pristine state between tests.
+  /// Without it a test's active slots, sources and waiters leak into the next
+  /// test (or the next file sharing the isolate) and hand-off assertions fail
+  /// non-deterministically. Pending waiters are completed so no future hangs.
+  @visibleForTesting
+  void reset() {
+    for (final waiter in _waiters) {
+      if (!waiter.completer.isCompleted) waiter.completer.complete();
+    }
+    _waiters.clear();
+    _activeSources.clear();
+    _active = 0;
+    _maxConcurrent = 1;
+    _delaySeconds = 0;
+  }
+
   /// Sort the waiting list into queue order (see
   /// [DownloadQueueOrder.positions]), re-read each dispatch so dragging a
   /// chapter up takes effect on what's still waiting. It is the order the
