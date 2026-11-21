@@ -2069,6 +2069,13 @@ class AppLocalizationsId extends AppLocalizations {
   String get add_extensions_repo => 'Tambahkan URL repositori';
 
   @override
+  String get curated_sources => 'Curated sources';
+
+  @override
+  String get curated_sources_subtitle =>
+      'Recommended repositories, checked for this library';
+
+  @override
   String get remove_extensions_repo => 'Hapus URL repositori';
 
   @override

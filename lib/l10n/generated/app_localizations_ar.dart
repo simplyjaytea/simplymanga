@@ -2077,6 +2077,13 @@ class AppLocalizationsAr extends AppLocalizations {
   String get add_extensions_repo => 'إضافة عنوان URL للمستودع';
 
   @override
+  String get curated_sources => 'Curated sources';
+
+  @override
+  String get curated_sources_subtitle =>
+      'Recommended repositories, checked for this library';
+
+  @override
   String get remove_extensions_repo => 'إزالة عنوان URL للمستودع';
 
   @override

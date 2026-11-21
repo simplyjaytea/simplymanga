@@ -2003,6 +2003,13 @@ class AppLocalizationsZh extends AppLocalizations {
   String get add_extensions_repo => '添加扩展库';
 
   @override
+  String get curated_sources => 'Curated sources';
+
+  @override
+  String get curated_sources_subtitle =>
+      'Recommended repositories, checked for this library';
+
+  @override
   String get remove_extensions_repo => '移除扩展库';
 
   @override
