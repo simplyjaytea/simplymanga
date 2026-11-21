@@ -39,6 +39,10 @@ is removed without a recorded reason.
   full `flutter test` — 1207 passed, 5 skipped, 1 failed (the URL assertion
   above, fixed and re-verified). clang 18 installed: `flutter_qjs`'s native
   build hook requires it on Linux (CI ubuntu runners ship it).
+- **CI verification (2026-11-21):** run 44853126499 — Linux analyze/test
+  **success**, macOS unsigned .ipa **success**; artifact
+  `simplyMANGA-unsigned-ipa` (115,191,776 bytes) read back via API. The
+  Mihon/OpenJDK-Zero pod (review M5) did not block the build. Phase 0 closed.
 
 ## Deliberately NOT renamed (compatibility)
 
