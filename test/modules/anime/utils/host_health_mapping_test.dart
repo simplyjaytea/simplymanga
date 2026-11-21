@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mangayomi/modules/anime/utils/host_health_mapping.dart';
+import 'package:mangayomi/utils/host_health_mapping.dart';
 import 'package:mangayomi/src/rust/api/anime_engine.dart';
 
 void main() {

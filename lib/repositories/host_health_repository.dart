@@ -1,7 +1,7 @@
 import 'package:isar_community/isar.dart';
 import 'package:mangayomi/models/host_health.dart';
 import 'package:mangayomi/models/tracker_library_cache.dart' show fastHash;
-import 'package:mangayomi/modules/anime/utils/host_health_mapping.dart';
+import 'package:mangayomi/utils/host_health_mapping.dart';
 import 'package:mangayomi/repositories/db.dart';
 import 'package:mangayomi/repositories/db_write_queue.dart';
 import 'package:mangayomi/src/rust/api/anime_engine.dart';
