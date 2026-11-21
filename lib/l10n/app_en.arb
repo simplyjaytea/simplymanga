@@ -336,7 +336,13 @@
   "delete_after_reading_slot": "Delete which chapter",
   "delete_after_reading_last": "The chapter just read",
   "delete_after_reading_nth": "{n} chapters back",
-  "@delete_after_reading_nth": {"placeholders": {"n": {"type": "int"}}},
+  "@delete_after_reading_nth": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "delete_after_reading_slot_subtitle": "Keeping a few read chapters lets you go back to them offline.",
   "delete_bookmarked_after_reading": "Also delete bookmarked chapters",
   "auto_download": "Auto download",
@@ -348,7 +354,13 @@
   "download_ahead": "Download ahead while reading",
   "download_ahead_subtitle": "While reading a downloaded chapter of a series in the library, download the next unread ones.",
   "download_ahead_count": "Next {n} chapters",
-  "@download_ahead_count": {"placeholders": {"n": {"type": "int"}}},
+  "@download_ahead_count": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "concurrent_downloads": "Concurrent downloads",
   "browse_subtitle": "Sources, global search",
   "only_include_pinned_sources": "Only include pinned sources",
@@ -899,29 +911,39 @@
   "@watch_order_source_community_list": {
     "description": "Source label for a community-created Trakt list.",
     "placeholders": {
-      "name": {"type": "String"},
-      "author": {"type": "String"}
+      "name": {
+        "type": "String"
+      },
+      "author": {
+        "type": "String"
+      }
     }
   },
   "watch_order_source_official_collection": "Official Trakt collection: {name}",
   "@watch_order_source_official_collection": {
     "description": "Source label for an official Trakt collection.",
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "watch_order_source_trakt_collection": "Trakt collection: {name}",
   "@watch_order_source_trakt_collection": {
     "description": "Source label for a Trakt collection when it is not marked as official.",
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "watch_order_source_seasons": "Seasons for {title}",
   "@watch_order_source_seasons": {
     "description": "Fallback source label when the watch order contains a show's seasons.",
     "placeholders": {
-      "title": {"type": "String"}
+      "title": {
+        "type": "String"
+      }
     }
   },
   "watch_order_select_source": "Order source",
@@ -932,24 +954,29 @@
   "@watch_order_season": {
     "description": "Season metadata shown in a watch order.",
     "placeholders": {
-      "number": {"type": "int"}
+      "number": {
+        "type": "int"
+      }
     }
   },
   "watch_order_episode": "Episode {number}",
   "@watch_order_episode": {
     "description": "Episode metadata shown in a watch order.",
     "placeholders": {
-      "number": {"type": "int"}
+      "number": {
+        "type": "int"
+      }
     }
   },
   "sequels": "Sequels",
-  "recommendations": "Recommendations",
   "recommendations_similarity": "Similarity:",
   "recommendation_rating_accessibility": "Rating {rating}",
   "@recommendation_rating_accessibility": {
     "description": "Accessible label for a recommendation rating in the provider's display format.",
     "placeholders": {
-      "rating": {"type": "String"}
+      "rating": {
+        "type": "String"
+      }
     }
   },
   "local_folder_structure": "Structure of a local folder",
@@ -1068,7 +1095,13 @@
   "app_lock_delay": "Lock after",
   "app_lock_delay_immediately": "Leaving the app",
   "app_lock_delay_minutes": "{n} min away",
-  "@app_lock_delay_minutes": {"placeholders": {"n": {"type": "int"}}},
+  "@app_lock_delay_minutes": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "app_lock_delay_launch_only": "Only when the app starts",
   "secure_screen": "Secure screen",
   "secure_screen_subtitle": "Hide the app from the app switcher, and on Android from screenshots and screen recordings.",
@@ -1423,11 +1456,19 @@
   "onboarding_or_local": "Or use files you already have",
   "onboarding_local_folder": "Add a folder",
   "onboarding_local_existing": "{count} folders already set up",
-  "@onboarding_local_existing": { "placeholders": { "count": {} } },
+  "@onboarding_local_existing": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "onboarding_local_any_type": "Manga, anime and novels all work. Each title goes to the right library based on what is inside it.",
   "onboarding_local_scanning": "Scanning the folder",
   "onboarding_local_found": "{count} titles found",
-  "@onboarding_local_found": { "placeholders": { "count": {} } },
+  "@onboarding_local_found": {
+    "placeholders": {
+      "count": {}
+    }
+  },
   "onboarding_local_remove": "Remove that folder",
   "onboarding_local_in_downloads": "That is the app's downloads folder. Adding it makes a second, local copy of a library the app already manages.",
   "onboarding_local_empty": "Nothing found. Pick the folder that holds your manga folders, not one manga.",
@@ -1451,14 +1492,22 @@
       }
     }
   },
- "global_search_no_sources": "No {itemType} sources are installed.",
+  "global_search_no_sources": "No {itemType} sources are installed.",
   "@global_search_no_sources": {
-    "placeholders": {"itemType": {"type": "String"}}
+    "placeholders": {
+      "itemType": {
+        "type": "String"
+      }
+    }
   },
   "global_search_no_sources_hint": "Add a repository under Browse, then install an extension for it.",
   "global_search_only_pinned": "You have {count, plural, =1{1 source} other{{count} sources}} for this, but only pinned ones are searched.",
   "@global_search_only_pinned": {
-    "placeholders": {"count": {"type": "int"}}
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   },
   "global_search_only_pinned_hint": "Pin one, or turn off \"Only include pinned sources\" in Browse settings.",
   "global_search_all_nsfw": "Every source you have for this is marked NSFW, and those are hidden.",
@@ -1581,9 +1630,21 @@
   "search_settings": "Search settings",
   "search_settings_hint": "Type a setting's name, or a word from its description",
   "reading_mode_for": "Reading mode for {name}",
-  "@reading_mode_for": {"placeholders": {"name": {"type": "String"}}},
+  "@reading_mode_for": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "default_is": "Default: {name}",
-  "@default_is": {"placeholders": {"name": {"type": "String"}}},
+  "@default_is": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "use_default": "Use the default",
   "is_the_default": "This is your default reading mode",
   "page_layout": "Page layout and zoom",
@@ -1595,7 +1656,13 @@
   "undo": "Undo",
   "removed_from_history": "Removed from history",
   "n_new_chapters": "{count, plural, =1{1 new chapter} other{{count} new chapters}}",
-  "@n_new_chapters": {"placeholders": {"count": {"type": "int"}}},
+  "@n_new_chapters": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "page_color_white": "White",
   "page_color_black": "Black",
   "page_color_night": "Night",
@@ -1609,7 +1676,13 @@
   "page_color_mint": "Mint",
   "page_color_honey": "Honey",
   "next_episode_in": "Next episode in {seconds} s",
-  "@next_episode_in": {"placeholders": {"seconds": {"type": "int"}}},
+  "@next_episode_in": {
+    "placeholders": {
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
   "stay_on_this_episode": "Stay on this episode",
   "got_it": "Got it",
   "gesture_brightness": "Slide up or down on the left for brightness",
@@ -1624,9 +1697,21 @@
   "download_failed": "Failed",
   "download_all": "Download all",
   "n_chapters_queued": "{count, plural, =1{1 chapter queued} other{{count} chapters queued}}",
-  "@n_chapters_queued": {"placeholders": {"count": {"type": "int"}}},
+  "@n_chapters_queued": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "n_selected": "{count} selected",
-  "@n_selected": {"placeholders": {"count": {"type": "int"}}},
+  "@n_selected": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "settings_general_summary": "Language, library updates, network",
   "settings_appearance_summary": "Theme, palette, navigation, type",
   "settings_novel_reader_summary": "Font, page colour, text to speech",
@@ -1638,27 +1723,63 @@
   "settings_security_summary": "App lock",
   "settings_about_summary": "Version, updates, error reports",
   "minutes_left": "≈ {minutes} min left",
-  "@minutes_left": {"placeholders": {"minutes": {"type": "int"}}},
+  "@minutes_left": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
   "group_playback": "Playback",
   "group_subtitles": "Subtitles",
   "group_screen": "Screen",
   "aniskip": "AniSkip",
   "seconds_short": "{n} s",
-  "@seconds_short": {"placeholders": {"n": {"type": "int"}}},
+  "@seconds_short": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "unknown_language_codes": "Unknown language code: {codes}",
-  "@unknown_language_codes": {"placeholders": {"codes": {"type": "String"}}},
+  "@unknown_language_codes": {
+    "placeholders": {
+      "codes": {
+        "type": "String"
+      }
+    }
+  },
   "group_network": "Network",
   "group_discord": "Discord",
   "invalid_url": "Enter a URL starting with {scheme}",
-  "@invalid_url": {"placeholders": {"scheme": {"type": "String"}}},
+  "@invalid_url": {
+    "placeholders": {
+      "scheme": {
+        "type": "String"
+      }
+    }
+  },
   "group_cleanup": "Clean up",
   "remove_entries_confirm": "Remove {n} entries and their history? This can't be undone.",
-  "@remove_entries_confirm": {"placeholders": {"n": {"type": "int"}}},
+  "@remove_entries_confirm": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "group_library_maintenance": "Library maintenance",
   "group_diagnostics": "Diagnostics",
   "update_no_notes": "No release notes.",
   "update_download_failed": "Download failed: {error}",
-  "@update_download_failed": {"placeholders": {"error": {"type": "String"}}},
+  "@update_download_failed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "update_network_error": "Network error while downloading.",
   "update_write_failed": "Couldn't write the APK file.",
   "update_later": "Later",
@@ -1684,12 +1805,24 @@
   "update_browser_failed": "Couldn't open the browser.",
   "deselect_all": "Deselect all",
   "update_failed_count": "{count, plural, =1{1 entry couldn't be updated} other{{count} entries couldn't be updated}}",
-  "@update_failed_count": {"placeholders": {"count": {"type": "int"}}},
+  "@update_failed_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "sort_ascending": "Ascending",
   "sort_descending": "Descending",
   "not_downloaded": "Not downloaded",
   "n_tracked": "{count, plural, =0{Nothing tracked yet} =1{1 entry tracked} other{{count} entries tracked}}",
-  "@n_tracked": {"placeholders": {"count": {"type": "int"}}},
+  "@n_tracked": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "no_tracker_connected": "No tracker connected",
   "no_tracker_connected_message": "Log in to a service in Settings › Tracking to see its lists here.",
   "edit_metadata": "Edit metadata",
@@ -1697,11 +1830,23 @@
   "group_app": "App",
   "group_sources_services": "Sources and services",
   "n_sources": "{count, plural, =0{No sources} =1{1 source} other{{count} sources}}",
-  "@n_sources": {"placeholders": {"count": {"type": "int"}}},
+  "@n_sources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "tv_player_beta_subtitle": "On: the player made for the TV remote. Off: the original player.",
   "anime_only_beta_subtitle": "Hide manga and novels across the app. Turn off to show everything.",
   "download_queue_start_failed": "Could not start the download queue: {error}",
-  "@download_queue_start_failed": {"placeholders": {"error": {"type": "String"}}},
+  "@download_queue_start_failed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "group_interface": "Interface",
   "group_navigation": "Navigation",
   "tv_home_beta_subtitle": "An anime home in rows (continue, new episodes, categories) instead of the flat grid",
@@ -1741,14 +1886,32 @@
   "screen_brightness_system": "Follows the system",
   "shortcut_play_pause": "Play or pause",
   "shortcut_seek_back": "Back {n} s",
-  "@shortcut_seek_back": {"placeholders": {"n": {"type": "int"}}},
+  "@shortcut_seek_back": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "shortcut_seek_forward": "Forward {n} s",
-  "@shortcut_seek_forward": {"placeholders": {"n": {"type": "int"}}},
+  "@shortcut_seek_forward": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "shortcut_volume_up": "Volume up",
   "shortcut_volume_down": "Volume down",
   "shortcut_mute": "Mute or unmute",
   "shortcut_skip_intro": "Skip the intro ({n} s)",
-  "@shortcut_skip_intro": {"placeholders": {"n": {"type": "int"}}},
+  "@shortcut_skip_intro": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "shortcut_previous_frame": "Previous frame",
   "shortcut_next_frame": "Next frame",
   "shortcut_shaders": "Anime4K shaders",
@@ -1781,7 +1944,13 @@
   "filler": "Filler",
   "obsolete": "Obsolete",
   "every_n_days": "{n, plural, =1{Every day} other{Every {n} days}}",
-  "@every_n_days": {"placeholders": {"n": {"type": "int"}}},
+  "@every_n_days": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
   "update_interval_unknown": "No estimate",
   "group_reading": "Reading",
   "group_reading_watching": "Reading and watching",
@@ -1796,7 +1965,13 @@
   "watched_count": "Watched",
   "source_code_error_title": "This source's code did not run",
   "source_code_error_failed": "{what} failed: the screen fell back so readers can go on",
-  "@source_code_error_failed": {"placeholders": {"what": {"type": "String"}}},
+  "@source_code_error_failed": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
   "copy_error": "Copy",
   "error_copied": "Error copied",
   "no_categories_yet": "No categories yet",
@@ -1823,12 +1998,39 @@
   "track_remove": "Stop tracking",
   "track_remove_local_msg": "Its status, progress, score and dates are deleted from this device.",
   "track_remove_online_msg": "The entry stays on {tracker}: only its link to this series is removed here.",
-  "@track_remove_online_msg": {"placeholders": {"tracker": {"type": "String"}}},
+  "@track_remove_online_msg": {
+    "placeholders": {
+      "tracker": {
+        "type": "String"
+      }
+    }
+  },
   "update_from_repo": "From {repo}",
-  "@update_from_repo": {"placeholders": {"repo": {"type": "String"}}},
+  "@update_from_repo": {
+    "placeholders": {
+      "repo": {
+        "type": "String"
+      }
+    }
+  },
   "update_from_other_repo": "Update from another repository?",
   "update_from_other_repo_msg": "{name} was installed from {origin}. Version {version} comes from {other}: once it is installed, {name} takes its updates from {other}. Only go ahead if you trust that repository.",
-  "@update_from_other_repo_msg": {"placeholders": {"name": {"type": "String"}, "origin": {"type": "String"}, "version": {"type": "String"}, "other": {"type": "String"}}},
+  "@update_from_other_repo_msg": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "origin": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      },
+      "other": {
+        "type": "String"
+      }
+    }
+  },
   "update_all_foreign": "Some updates come from another repository",
   "update_all_foreign_msg": "Once updated, these extensions take their updates from the new repository. Only include them if you trust it.",
   "update_all_skip_foreign": "Only from their own repository",
@@ -1838,16 +2040,40 @@
   "device_sync_host": "Host sync on this device",
   "device_sync_host_info": "Your other devices sync with this one over your local network or Tailscale, encrypted, and only once paired. Keep the app open on this device so they can sync.",
   "device_sync_host_running": "Listening on port {port}",
-  "@device_sync_host_running": {"placeholders": {"port": {"type": "String"}}},
+  "@device_sync_host_running": {
+    "placeholders": {
+      "port": {
+        "type": "String"
+      }
+    }
+  },
   "device_sync_host_failed": "Couldn't start the host: {error}",
-  "@device_sync_host_failed": {"placeholders": {"error": {"type": "String"}}},
+  "@device_sync_host_failed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "device_sync_add_device": "Add a device",
   "device_sync_paired_devices": "Paired devices",
   "device_sync_no_paired": "No device paired yet",
   "device_sync_paired_on": "Paired on {date}",
-  "@device_sync_paired_on": {"placeholders": {"date": {"type": "String"}}},
+  "@device_sync_paired_on": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "device_sync_forget_title": "Remove {name}?",
-  "@device_sync_forget_title": {"placeholders": {"name": {"type": "String"}}},
+  "@device_sync_forget_title": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "device_sync_forget_message": "This device stops accepting it at once. It can pair again later with a new QR code.",
   "device_sync_join_section": "Join a host",
   "device_sync_join_info": "Pair with the device that hosts sync. Its QR code is under Add a device on that device.",
@@ -1867,30 +2093,120 @@
   "device_sync_no_network": "This device isn't on a local network, so no other device can reach it.",
   "device_sync_allow_title": "Allow this device?",
   "device_sync_allow_message": "\"{name}\" wants to sync with this device. Allow it only if it's yours.",
-  "@device_sync_allow_message": {"placeholders": {"name": {"type": "String"}}},
+  "@device_sync_allow_message": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "device_sync_allow": "Allow",
   "device_sync_deny": "Deny",
   "device_sync_switch_title": "Change what this device syncs with?",
   "device_sync_switch_message": "This device stops syncing with {server}. Nothing is deleted, here or there.",
-  "@device_sync_switch_message": {"placeholders": {"server": {"type": "String"}}},
+  "@device_sync_switch_message": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
   "device_sync_with_host": "Synced with the host at {server}",
-  "@device_sync_with_host": {"placeholders": {"server": {"type": "String"}}},
+  "@device_sync_with_host": {
+    "placeholders": {
+      "server": {
+        "type": "String"
+      }
+    }
+  },
   "device_sync_with_this_device": "Synced with this device's host",
   "device_sync_leave": "Stop syncing with the host",
   "device_sync_stop_host_title": "Stop hosting?",
   "device_sync_stop_host_message": "Your other devices can't sync until it's back on. What the host stored stays on this device.",
   "device_sync_scan_hint": "Point the camera at the QR code on the host",
   "sync_refused": "The sync was refused because of {what}. Update Mangayomi and the sync server, then try again.",
-  "@sync_refused": {"placeholders": {"what": {"type": "String"}}},
+  "@sync_refused": {
+    "placeholders": {
+      "what": {
+        "type": "String"
+      }
+    }
+  },
   "sync_rows_not_sent": "These items are too long to sync and were left out: {items}",
-  "@sync_rows_not_sent": {"placeholders": {"items": {"type": "String"}}},
+  "@sync_rows_not_sent": {
+    "placeholders": {
+      "items": {
+        "type": "String"
+      }
+    }
+  },
   "missing_chapters_title": "Missing chapters",
   "missing_episodes_title": "Missing episodes",
   "missing_chapters_info": "No chapter of this series carries these numbers. The source may not have them, or may have numbered them differently.",
   "missing_chapters_skipped": "{count, plural, =1{Chapter {numbers} is missing} other{Chapters {numbers} are missing}}",
-  "@missing_chapters_skipped": {"placeholders": {"count": {"type": "int"}, "numbers": {"type": "String"}}},
+  "@missing_chapters_skipped": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "numbers": {
+        "type": "String"
+      }
+    }
+  },
   "missing_chapters_skipped_message": "The next chapter is {chapter}.",
-  "@missing_chapters_skipped_message": {"placeholders": {"chapter": {"type": "String"}}},
+  "@missing_chapters_skipped_message": {
+    "placeholders": {
+      "chapter": {
+        "type": "String"
+      }
+    }
+  },
   "warn_missing_chapters": "Warn about missing chapters",
-  "warn_missing_chapters_subtitle": "Before going to the next chapter, say which chapter numbers it skips."
+  "warn_missing_chapters_subtitle": "Before going to the next chapter, say which chapter numbers it skips.",
+  "playback_no_servers_title": "No servers for this episode",
+  "@playback_no_servers_title": {
+    "description": "Anime playback, R6 'source returned no servers'. Title slot of ShioriErrorState (unclamped; keep short for cover/TV). Honest replacement for the legacy 'Video list is empty' path."
+  },
+  "playback_no_servers_detail": "This source returned no servers for this episode. Try another source, or open it in your browser.",
+  "@playback_no_servers_detail": {
+    "description": "Detail slot of ShioriErrorState (maxLines 4, maxWidth 520). Offers switching source plus the WebView escape; pairs with playback_open_source."
+  },
+  "playback_all_servers_failed": "{count, plural, =1{Tried 1 server. It could not play this episode.} other{Tried {count} servers. None could play this episode.}}",
+  "@playback_all_servers_failed": {
+    "description": "Anime playback, R6 'all extractors failed' (attempt cap min(list,5)). count = servers tried. Primary honest line; per-server chips carry status. User-facing term is 'servers' (matches R1 toast), not internal 'extractors'.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "playback_challenge_title": "Browser check needed",
+  "@playback_challenge_title": {
+    "description": "R6 'CF challenge'. Title of ShioriChallengePendingBanner (maxLines 2). The host's bouncer, never the user's fault; does not imply the challenge is solved."
+  },
+  "playback_challenge_message": "This host needs a quick browser check. Open the source, pass it once, then come back.",
+  "@playback_challenge_message": {
+    "description": "Message of ShioriChallengePendingBanner (maxLines 3). Pairs with the playback_open_source action; 'once' reassures it is a one-time check."
+  },
+  "playback_open_source": "Open source",
+  "@playback_open_source": {
+    "description": "Action label: open the challenged/failed source in the in-app WebView (R6 WebView escape kept). Secondary action on ShioriErrorState; action on ShioriChallengePendingBanner."
+  },
+  "playback_timeout": "This source took too long to respond.",
+  "@playback_timeout": {
+    "description": "Anime playback, R6 'timeout' (source exceeded the fetch deadline). Primary line; Retry is the recourse. Does not blame the user."
+  },
+  "source_load_failed": "Couldn't load this source. Try again, or pick another source.",
+  "@source_load_failed": {
+    "description": "A source/extension failed to load its content (browse / source-stream). Primary line; Retry + switch recourse. Distinct from source_code_error_* (reader code-fallback path)."
+  },
+  "source_empty_title": "No sources yet",
+  "@source_empty_title": {
+    "description": "Empty sources state (first-run / no extensions installed). Title slot. Calm replacement for legacy shouty 'No sources installed!' (legacy sweep is a separate card)."
+  },
+  "source_empty_message": "Sources are the sites this app reads from. Add a repository under Browse, then install an extension.",
+  "@source_empty_message": {
+    "description": "Message under source_empty_title. Brief explainer plus the same Browse->install path used by onboarding_later and global_search_no_sources_hint. App name omitted to avoid the Mangayomi/simplyMANGA string-branding drift."
+  }
 }

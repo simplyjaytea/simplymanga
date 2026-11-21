@@ -4977,4 +4977,46 @@ class AppLocalizationsIt extends AppLocalizations {
   @override
   String get warn_missing_chapters_subtitle =>
       'Prima di passare al capitolo successivo, indica quali numeri di capitolo salta.';
+
+  @override
+  String get playback_no_servers_title => 'No servers for this episode';
+
+  @override
+  String get playback_no_servers_detail =>
+      'This source returned no servers for this episode. Try another source, or open it in your browser.';
+
+  @override
+  String playback_all_servers_failed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tried $count servers. None could play this episode.',
+      one: 'Tried 1 server. It could not play this episode.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get playback_challenge_title => 'Browser check needed';
+
+  @override
+  String get playback_challenge_message =>
+      'This host needs a quick browser check. Open the source, pass it once, then come back.';
+
+  @override
+  String get playback_open_source => 'Open source';
+
+  @override
+  String get playback_timeout => 'This source took too long to respond.';
+
+  @override
+  String get source_load_failed =>
+      'Couldn\'t load this source. Try again, or pick another source.';
+
+  @override
+  String get source_empty_title => 'No sources yet';
+
+  @override
+  String get source_empty_message =>
+      'Sources are the sites this app reads from. Add a repository under Browse, then install an extension.';
 }

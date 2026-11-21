@@ -8737,6 +8737,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Before going to the next chapter, say which chapter numbers it skips.'**
   String get warn_missing_chapters_subtitle;
+
+  /// Anime playback, R6 'source returned no servers'. Title slot of ShioriErrorState (unclamped; keep short for cover/TV). Honest replacement for the legacy 'Video list is empty' path.
+  ///
+  /// In en, this message translates to:
+  /// **'No servers for this episode'**
+  String get playback_no_servers_title;
+
+  /// Detail slot of ShioriErrorState (maxLines 4, maxWidth 520). Offers switching source plus the WebView escape; pairs with playback_open_source.
+  ///
+  /// In en, this message translates to:
+  /// **'This source returned no servers for this episode. Try another source, or open it in your browser.'**
+  String get playback_no_servers_detail;
+
+  /// Anime playback, R6 'all extractors failed' (attempt cap min(list,5)). count = servers tried. Primary honest line; per-server chips carry status. User-facing term is 'servers' (matches R1 toast), not internal 'extractors'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Tried 1 server. It could not play this episode.} other{Tried {count} servers. None could play this episode.}}'**
+  String playback_all_servers_failed(int count);
+
+  /// R6 'CF challenge'. Title of ShioriChallengePendingBanner (maxLines 2). The host's bouncer, never the user's fault; does not imply the challenge is solved.
+  ///
+  /// In en, this message translates to:
+  /// **'Browser check needed'**
+  String get playback_challenge_title;
+
+  /// Message of ShioriChallengePendingBanner (maxLines 3). Pairs with the playback_open_source action; 'once' reassures it is a one-time check.
+  ///
+  /// In en, this message translates to:
+  /// **'This host needs a quick browser check. Open the source, pass it once, then come back.'**
+  String get playback_challenge_message;
+
+  /// Action label: open the challenged/failed source in the in-app WebView (R6 WebView escape kept). Secondary action on ShioriErrorState; action on ShioriChallengePendingBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'Open source'**
+  String get playback_open_source;
+
+  /// Anime playback, R6 'timeout' (source exceeded the fetch deadline). Primary line; Retry is the recourse. Does not blame the user.
+  ///
+  /// In en, this message translates to:
+  /// **'This source took too long to respond.'**
+  String get playback_timeout;
+
+  /// A source/extension failed to load its content (browse / source-stream). Primary line; Retry + switch recourse. Distinct from source_code_error_* (reader code-fallback path).
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t load this source. Try again, or pick another source.'**
+  String get source_load_failed;
+
+  /// Empty sources state (first-run / no extensions installed). Title slot. Calm replacement for legacy shouty 'No sources installed!' (legacy sweep is a separate card).
+  ///
+  /// In en, this message translates to:
+  /// **'No sources yet'**
+  String get source_empty_title;
+
+  /// Message under source_empty_title. Brief explainer plus the same Browse->install path used by onboarding_later and global_search_no_sources_hint. App name omitted to avoid the Mangayomi/simplyMANGA string-branding drift.
+  ///
+  /// In en, this message translates to:
+  /// **'Sources are the sites this app reads from. Add a repository under Browse, then install an extension.'**
+  String get source_empty_message;
 }
 
 class _AppLocalizationsDelegate
