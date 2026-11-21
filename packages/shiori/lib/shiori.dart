@@ -13,6 +13,7 @@ export 'src/components/choice.dart';
 export 'src/components/cover.dart';
 export 'src/components/cover_grid.dart';
 export 'src/components/dialog.dart';
+export 'src/components/error_state.dart';
 export 'src/components/empty_state.dart';
 export 'src/components/icon.dart';
 export 'src/components/list_row.dart';

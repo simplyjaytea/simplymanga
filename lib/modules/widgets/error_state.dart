@@ -54,83 +54,16 @@ class ErrorState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
-    final tokens = context.shiori;
-    final c = tokens.color;
-    final detailText = detail?.trim();
-    final circle = tokens.scaled(compact ? 56 : 72);
-
-    return Center(
-      child: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-          horizontal: ShioriSpace.s24,
-          vertical: compact ? ShioriSpace.s16 : ShioriSpace.s32,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            ExcludeSemantics(
-              child: Container(
-                width: circle,
-                height: circle,
-                decoration: BoxDecoration(
-                  color: c.error.background,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Symbols.error_rounded,
-                  size: circle * 0.5,
-                  color: c.error.foreground,
-                ),
-              ),
-            ),
-            SizedBox(height: compact ? ShioriSpace.s12 : ShioriSpace.s16),
-            Text(
-              message ?? l10n.something_went_wrong,
-              textAlign: TextAlign.center,
-              style: tokens.text.section.copyWith(color: c.fg),
-            ),
-            if (detailText != null && detailText.isNotEmpty) ...[
-              const SizedBox(height: ShioriSpace.s8),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
-                child: Text(
-                  detailText,
-                  textAlign: TextAlign.center,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: tokens.text.meta.copyWith(color: c.fgMuted),
-                ),
-              ),
-            ],
-            if (onRetry != null || onSecondary != null) ...[
-              SizedBox(height: compact ? ShioriSpace.s16 : ShioriSpace.s24),
-              Wrap(
-                spacing: ShioriSpace.s8,
-                runSpacing: ShioriSpace.s8,
-                alignment: WrapAlignment.center,
-                children: [
-                  if (onRetry != null)
-                    ShioriButton.secondary(
-                      // On a TV there is no pointer, so the only actionable
-                      // control on the screen takes focus straight away.
-                      autofocus: autofocusRetry ?? isTv,
-                      onPressed: onRetry,
-                      icon: Symbols.refresh_rounded,
-                      label: l10n.retry,
-                    ),
-                  if (onSecondary != null && secondaryLabel != null)
-                    ShioriButton.quiet(
-                      onPressed: onSecondary,
-                      icon: secondaryIcon,
-                      label: secondaryLabel!,
-                    ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
+    return ShioriErrorState(
+      title: message ?? l10n.something_went_wrong,
+      detail: detail,
+      retryLabel: onRetry == null ? null : l10n.retry,
+      onRetry: onRetry,
+      secondaryLabel: secondaryLabel,
+      secondaryIcon: secondaryIcon,
+      onSecondary: onSecondary,
+      compact: compact,
+      autofocusRetry: autofocusRetry ?? isTv,
     );
   }
 }

@@ -170,6 +170,68 @@ void main() {
     });
   });
 
+  testWidgets('ShioriErrorState shows honest detail and retry action', (
+    tester,
+  ) async {
+    var retried = false;
+    await tester.pumpWidget(
+      _host(
+        ShioriErrorState(
+          title: 'Playback failed',
+          detail: 'Network timeout',
+          retryLabel: 'Try again',
+          onRetry: () => retried = true,
+        ),
+      ),
+    );
+
+    expect(find.text('Playback failed'), findsOneWidget);
+    expect(find.text('Network timeout'), findsOneWidget);
+    await tester.tap(find.text('Try again'));
+    expect(retried, isTrue);
+  });
+
+  testWidgets('ShioriErrorState omits unavailable retry action', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(const ShioriErrorState(title: 'Source unavailable')),
+    );
+
+    expect(find.text('Source unavailable'), findsOneWidget);
+    expect(find.byType(FilledButton), findsNothing);
+  });
+
+  testWidgets('ShioriChallengePendingBanner offers source action', (
+    tester,
+  ) async {
+    var opened = false;
+    await tester.pumpWidget(
+      _host(
+        ShioriChallengePendingBanner(
+          title: 'Verification required',
+          message: 'Complete the check in the source page.',
+          actionLabel: 'Open source',
+          onAction: () => opened = true,
+        ),
+      ),
+    );
+
+    expect(find.text('Verification required'), findsOneWidget);
+    expect(find.text('Complete the check in the source page.'), findsOneWidget);
+    await tester.tap(find.text('Open source'));
+    expect(opened, isTrue);
+  });
+
+  testWidgets('ShioriLoading exposes its localized label', (tester) async {
+    await tester.pumpWidget(
+      _host(const ShioriLoading(label: 'Loading sources')),
+    );
+
+    expect(find.text('Loading sources'), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+  });
+
   testWidgets('ShioriEmptyState offers the next step', (tester) async {
     var browsed = false;
     await tester.pumpWidget(
