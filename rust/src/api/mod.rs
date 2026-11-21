@@ -4,6 +4,7 @@
 
 
 pub mod aidoku_wasm;
+pub mod anime_engine;
 pub mod epub;
 pub mod rar;
 pub mod rhttp;

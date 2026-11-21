@@ -5,6 +5,7 @@
 
 import 'aidoku_wasm/host_js.dart';
 import 'api/aidoku_wasm.dart';
+import 'api/anime_engine.dart';
 import 'api/epub.dart';
 import 'api/rar.dart';
 import 'api/rhttp/client.dart';
@@ -16,6 +17,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;
 
+import 'engine/classify.dart';
 import 'frb_generated.dart';
 import 'lib.dart';
 
@@ -32,6 +34,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_AidokuSourcePtr => wire
       ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAidokuSourcePtr;
+
+  CrossPlatformFinalizerArg
+  get rust_arc_decrement_strong_count_AnimeEnginePtr => wire
+      ._rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEnginePtr;
 
   CrossPlatformFinalizerArg
   get rust_arc_decrement_strong_count_CancellationTokenPtr => wire
@@ -69,6 +75,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  AnimeEngine
+  dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
+    dynamic raw,
+  );
+
+  @protected
   CancellationToken
   dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCancellationToken(
     dynamic raw,
@@ -101,6 +113,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   AidokuSource
   dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAidokuSource(
+    dynamic raw,
+  );
+
+  @protected
+  AnimeEngine
+  dco_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
     dynamic raw,
   );
 
@@ -166,6 +184,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  FutureOr<ProbeResponse> Function(ProbeRequest)
+  dco_decode_DartFn_Inputs_probe_request_Output_probe_response_AnyhowException(
+    dynamic raw,
+  );
+
+  @protected
   FutureOr<void> Function(RhttpError)
   dco_decode_DartFn_Inputs_rhttp_error_Output_unit_AnyhowException(dynamic raw);
 
@@ -181,6 +205,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   AidokuSource
   dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAidokuSource(
+    dynamic raw,
+  );
+
+  @protected
+  AnimeEngine
+  dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
     dynamic raw,
   );
 
@@ -348,6 +378,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TlsVersion dco_decode_box_autoadd_tls_version(dynamic raw);
 
   @protected
+  int dco_decode_box_autoadd_u_16(dynamic raw);
+
+  @protected
   ClientCertificate dco_decode_client_certificate(dynamic raw);
 
   @protected
@@ -355,6 +388,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CustomProxy dco_decode_custom_proxy(dynamic raw);
+
+  @protected
+  EngineAction dco_decode_engine_action(dynamic raw);
 
   @protected
   EpubChapter dco_decode_epub_chapter(dynamic raw);
@@ -367,6 +403,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double dco_decode_f_32(dynamic raw);
+
+  @protected
+  double dco_decode_f_64(dynamic raw);
+
+  @protected
+  FailureClass dco_decode_failure_class(dynamic raw);
+
+  @protected
+  HostHealthView dco_decode_host_health_view(dynamic raw);
 
   @protected
   HttpHeaders dco_decode_http_headers(dynamic raw);
@@ -423,6 +468,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<EpubResource> dco_decode_list_epub_resource(dynamic raw);
 
   @protected
+  List<HostHealthView> dco_decode_list_host_health_view(dynamic raw);
+
+  @protected
   List<Uint8List> dco_decode_list_list_prim_u_8_strict(dynamic raw);
 
   @protected
@@ -433,6 +481,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List dco_decode_list_prim_u_8_strict(dynamic raw);
+
+  @protected
+  List<RankedServer> dco_decode_list_ranked_server(dynamic raw);
 
   @protected
   List<(String, List<String>)> dco_decode_list_record_string_list_string(
@@ -511,6 +562,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TlsVersion? dco_decode_opt_box_autoadd_tls_version(dynamic raw);
 
   @protected
+  int? dco_decode_opt_box_autoadd_u_16(dynamic raw);
+
+  @protected
   List<String>? dco_decode_opt_list_String(dynamic raw);
 
   @protected
@@ -523,10 +577,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<(String, String)>? dco_decode_opt_list_record_string_string(dynamic raw);
 
   @protected
+  ProbeRequest dco_decode_probe_request(dynamic raw);
+
+  @protected
+  ProbeResponse dco_decode_probe_response(dynamic raw);
+
+  @protected
   ProxyCondition dco_decode_proxy_condition(dynamic raw);
 
   @protected
   ProxySettings dco_decode_proxy_settings(dynamic raw);
+
+  @protected
+  RankedServer dco_decode_ranked_server(dynamic raw);
 
   @protected
   (String, List<String>) dco_decode_record_string_list_string(dynamic raw);
@@ -604,6 +667,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  AnimeEngine
+  sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   CancellationToken
   sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCancellationToken(
     SseDeserializer deserializer,
@@ -636,6 +705,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   AidokuSource
   sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAidokuSource(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  AnimeEngine
+  sse_decode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
     SseDeserializer deserializer,
   );
 
@@ -682,6 +757,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   AidokuSource
   sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAidokuSource(
+    SseDeserializer deserializer,
+  );
+
+  @protected
+  AnimeEngine
+  sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
     SseDeserializer deserializer,
   );
 
@@ -882,6 +963,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   TlsVersion sse_decode_box_autoadd_tls_version(SseDeserializer deserializer);
 
   @protected
+  int sse_decode_box_autoadd_u_16(SseDeserializer deserializer);
+
+  @protected
   ClientCertificate sse_decode_client_certificate(SseDeserializer deserializer);
 
   @protected
@@ -889,6 +973,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   CustomProxy sse_decode_custom_proxy(SseDeserializer deserializer);
+
+  @protected
+  EngineAction sse_decode_engine_action(SseDeserializer deserializer);
 
   @protected
   EpubChapter sse_decode_epub_chapter(SseDeserializer deserializer);
@@ -901,6 +988,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   double sse_decode_f_32(SseDeserializer deserializer);
+
+  @protected
+  double sse_decode_f_64(SseDeserializer deserializer);
+
+  @protected
+  FailureClass sse_decode_failure_class(SseDeserializer deserializer);
+
+  @protected
+  HostHealthView sse_decode_host_health_view(SseDeserializer deserializer);
 
   @protected
   HttpHeaders sse_decode_http_headers(SseDeserializer deserializer);
@@ -967,6 +1063,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  List<HostHealthView> sse_decode_list_host_health_view(
+    SseDeserializer deserializer,
+  );
+
+  @protected
   List<Uint8List> sse_decode_list_list_prim_u_8_strict(
     SseDeserializer deserializer,
   );
@@ -981,6 +1082,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   Uint8List sse_decode_list_prim_u_8_strict(SseDeserializer deserializer);
+
+  @protected
+  List<RankedServer> sse_decode_list_ranked_server(
+    SseDeserializer deserializer,
+  );
 
   @protected
   List<(String, List<String>)> sse_decode_list_record_string_list_string(
@@ -1083,6 +1189,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  int? sse_decode_opt_box_autoadd_u_16(SseDeserializer deserializer);
+
+  @protected
   List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
 
   @protected
@@ -1099,10 +1208,19 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  ProbeRequest sse_decode_probe_request(SseDeserializer deserializer);
+
+  @protected
+  ProbeResponse sse_decode_probe_response(SseDeserializer deserializer);
+
+  @protected
   ProxyCondition sse_decode_proxy_condition(SseDeserializer deserializer);
 
   @protected
   ProxySettings sse_decode_proxy_settings(SseDeserializer deserializer);
+
+  @protected
+  RankedServer sse_decode_ranked_server(SseDeserializer deserializer);
 
   @protected
   (String, List<String>) sse_decode_record_string_list_string(
@@ -1194,6 +1312,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+  sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
+    AnimeEngine self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
   sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCancellationToken(
     CancellationToken self,
     SseSerializer serializer,
@@ -1231,6 +1356,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAidokuSource(
     AidokuSource self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
+    AnimeEngine self,
     SseSerializer serializer,
   );
 
@@ -1305,6 +1437,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void
+  sse_encode_DartFn_Inputs_probe_request_Output_probe_response_AnyhowException(
+    FutureOr<ProbeResponse> Function(ProbeRequest) self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_DartFn_Inputs_rhttp_error_Output_unit_AnyhowException(
     FutureOr<void> Function(RhttpError) self,
     SseSerializer serializer,
@@ -1329,6 +1468,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
   sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAidokuSource(
     AidokuSource self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void
+  sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
+    AnimeEngine self,
     SseSerializer serializer,
   );
 
@@ -1591,6 +1737,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_box_autoadd_u_16(int self, SseSerializer serializer);
+
+  @protected
   void sse_encode_client_certificate(
     ClientCertificate self,
     SseSerializer serializer,
@@ -1606,6 +1755,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_custom_proxy(CustomProxy self, SseSerializer serializer);
 
   @protected
+  void sse_encode_engine_action(EngineAction self, SseSerializer serializer);
+
+  @protected
   void sse_encode_epub_chapter(EpubChapter self, SseSerializer serializer);
 
   @protected
@@ -1616,6 +1768,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_f_32(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_f_64(double self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_failure_class(FailureClass self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_host_health_view(
+    HostHealthView self,
+    SseSerializer serializer,
+  );
 
   @protected
   void sse_encode_http_headers(HttpHeaders self, SseSerializer serializer);
@@ -1702,6 +1866,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_list_host_health_view(
+    List<HostHealthView> self,
+    SseSerializer serializer,
+  );
+
+  @protected
   void sse_encode_list_list_prim_u_8_strict(
     List<Uint8List> self,
     SseSerializer serializer,
@@ -1719,6 +1889,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_prim_u_8_strict(
     Uint8List self,
+    SseSerializer serializer,
+  );
+
+  @protected
+  void sse_encode_list_ranked_server(
+    List<RankedServer> self,
     SseSerializer serializer,
   );
 
@@ -1848,6 +2024,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_opt_box_autoadd_u_16(int? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
 
   @protected
@@ -1869,6 +2048,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   );
 
   @protected
+  void sse_encode_probe_request(ProbeRequest self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_probe_response(ProbeResponse self, SseSerializer serializer);
+
+  @protected
   void sse_encode_proxy_condition(
     ProxyCondition self,
     SseSerializer serializer,
@@ -1876,6 +2061,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_proxy_settings(ProxySettings self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_ranked_server(RankedServer self, SseSerializer serializer);
 
   @protected
   void sse_encode_record_string_list_string(
@@ -2014,6 +2202,40 @@ class RustLibWire implements BaseWire {
       );
   late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAidokuSource =
       _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAidokuSourcePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEnginePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_mangayomi_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine',
+      );
+  late final _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine =
+      _rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEnginePtr
+          .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
+
+  void
+  rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
+    ffi.Pointer<ffi.Void> ptr,
+  ) {
+    return _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine(
+      ptr,
+    );
+  }
+
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEnginePtr =
+      _lookup<ffi.NativeFunction<ffi.Void Function(ffi.Pointer<ffi.Void>)>>(
+        'frbgen_mangayomi_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine',
+      );
+  late final _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEngine =
+      _rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerAnimeEnginePtr
           .asFunction<void Function(ffi.Pointer<ffi.Void>)>();
 
   void

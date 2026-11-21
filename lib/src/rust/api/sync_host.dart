@@ -9,9 +9,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'sync_host.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `checked`, `unavailable`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `PendingGuard`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `drop`, `from`, `from`
+// These functions are ignored because they are not marked as `pub`: `checked`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `from`, `from`
 
 /// A new identity for this device.
 Future<SyncIdentity> syncGenerateIdentity() =>

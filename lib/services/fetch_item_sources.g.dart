@@ -75,7 +75,7 @@ final class FetchItemSourcesListProvider
 }
 
 String _$fetchItemSourcesListHash() =>
-    r'74b867f748d5002f820ad967714d086e362975e7';
+    r'9b9e203eb1e53099eb4a811a4b3df1c726566ce1';
 
 /// Reads the extension repositories of [itemType], or acts on the one
 /// extension [id]: installs it, or installs the update the last read found

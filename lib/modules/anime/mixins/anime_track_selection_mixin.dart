@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart' as riv;
 import 'package:mangayomi/models/video.dart' as vid;
 import 'package:mangayomi/modules/anime/utils/audio_track_fallback.dart';
 import 'package:mangayomi/modules/anime/utils/audio_track_label.dart';
+import 'package:mangayomi/modules/anime/utils/server_fallback.dart';
+import 'package:mangayomi/src/rust/api/anime_engine.dart';
 import 'package:mangayomi/modules/anime/utils/player_labels.dart';
 import 'package:mangayomi/modules/anime/utils/track_list_builder.dart';
 import 'package:mangayomi/modules/anime/utils/video_prefs.dart';
@@ -37,6 +39,16 @@ mixin AnimeTrackSelectionMixin<T extends riv.ConsumerStatefulWidget>
   String? _requestedAudioLanguage;
   bool _audioFallbackInProgress = false;
   bool _audioFallbackErrorQueued = false;
+
+  // Server-level reliability (Lane A2). The Rust engine classifies failures and
+  // drives fallback; these track tried servers and any pending anti-bot gate.
+  AnimeEngine? _animeEngine;
+  final Set<String> _triedServerUrls = {};
+  bool _serverFallbackInProgress = false;
+  String? _pendingChallengeServer;
+
+  /// A server awaiting an anti-bot challenge the user must clear (never skipped).
+  String? get pendingChallengeServer => _pendingChallengeServer;
 
   void initializeDefaultSubtitleAndAudioTracks() {
     if (!initSubtitleAndAudio) return;
@@ -427,12 +439,92 @@ mixin AnimeTrackSelectionMixin<T extends riv.ConsumerStatefulWidget>
 
   void reportPlaybackError(String error) {
     final message = error.trim();
-    if (message.isEmpty || !isAudioDecoderInitializationError(message)) return;
-    if (_audioFallbackInProgress) {
-      _audioFallbackErrorQueued = true;
+    if (message.isEmpty) return;
+    if (isAudioDecoderInitializationError(message)) {
+      if (_audioFallbackInProgress) {
+        _audioFallbackErrorQueued = true;
+        return;
+      }
+      unawaited(_recoverFromAudioDecoderError(message));
       return;
     }
-    unawaited(_recoverFromAudioDecoderError(message));
+    // Every other failure (403, dead stream, timeout, buffering) used to be
+    // silently dropped. Route it to the reliability engine for server fallback.
+    unawaited(_recoverFromServerError(message));
+  }
+
+  Future<AnimeEngine?> _ensureAnimeEngine(List<VideoPrefs> options) async {
+    if (_animeEngine != null) return _animeEngine;
+    try {
+      final servers = options.map(serverUrlOf).whereType<String>().toList();
+      if (servers.isEmpty) return null;
+      _animeEngine = await AnimeEngine.newInstance(servers: servers);
+      return _animeEngine;
+    } catch (_) {
+      // Native bridge unavailable (e.g. headless test): fall back to pure Dart.
+      return null;
+    }
+  }
+
+  Future<void> _recoverFromServerError(String message) async {
+    if (_serverFallbackInProgress) return;
+    _serverFallbackInProgress = true;
+    try {
+      final options = buildVideoQualityOptions(
+        player: trackPlayer,
+        videos: trackVideos,
+        isLocal: isLocalForTracks,
+      );
+      final currentPrefs = selectedVideoPrefs.value;
+      final currentUrl = currentPrefs == null ? null : serverUrlOf(currentPrefs);
+      if (currentUrl != null) _triedServerUrls.add(currentUrl);
+
+      final engine = await _ensureAnimeEngine(options);
+      EngineAction action;
+      if (engine != null && currentUrl != null) {
+        action = await engine.reportError(server: currentUrl, error: message);
+      } else {
+        final candidates = serverFallbackCandidates(
+          options: options,
+          currentUrl: currentUrl,
+          triedUrls: _triedServerUrls,
+        );
+        action = candidates.isEmpty
+            ? const EngineAction.fail(reason: 'all servers failed')
+            : EngineAction.play(server: serverUrlOf(candidates.first)!);
+      }
+
+      final plan = planFromEngineAction(action, options);
+      switch (plan) {
+        case SwitchServer(:final prefs):
+          AppLogger.log(
+            'Playback failed ($message); switching server to '
+            '${serverUrlOf(prefs)}.',
+            logLevel: LogLevel.warning,
+          );
+          await openMediaFromTrackSelection(prefs);
+        case AwaitChallenge(:final server):
+          _pendingChallengeServer = server;
+          AppLogger.log(
+            'Playback gated by an anti-bot challenge on $server; awaiting user.',
+            logLevel: LogLevel.warning,
+          );
+        case FallbackExhausted(:final reason):
+          AppLogger.log(
+            'Playback fallback exhausted: $reason ($message)',
+            logLevel: LogLevel.error,
+          );
+        case NoFallback():
+          break;
+      }
+    } catch (error, stackTrace) {
+      AppLogger.log(
+        'Server fallback failed: $error\n$stackTrace',
+        logLevel: LogLevel.error,
+      );
+    } finally {
+      _serverFallbackInProgress = false;
+    }
   }
 
   Future<void> _recoverFromAudioDecoderError(String message) async {
