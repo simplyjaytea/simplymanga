@@ -74,6 +74,8 @@ Future<void> markDownloadFailed(Chapter chapter) async {
       ..succeeded = 0
       ..failed = 1,
   );
+  // Terminal state: drop the FIFO arrival so a retry queues at the back.
+  DownloadQueueOrder.forgetArrival(record.id!);
 }
 
 /// True when a download was cancelled while it was queued. cancelDownloads

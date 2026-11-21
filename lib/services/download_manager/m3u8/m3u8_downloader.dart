@@ -16,6 +16,7 @@ import 'package:mangayomi/services/download_manager/download_retry.dart';
 import 'package:mangayomi/services/download_manager/m3u8/models/download.dart';
 import 'package:mangayomi/services/download_manager/m3u8/models/ts_info.dart';
 import 'package:mangayomi/services/download_manager/m3u8/resume_manifest.dart';
+import 'package:mangayomi/services/download_manager/m3u8/resume_progress.dart';
 import 'package:mangayomi/services/download_manager/download_isolate_pool.dart';
 import 'package:mangayomi/services/download_manager/m_downloader.dart';
 import 'package:mangayomi/utils/extensions/string_extensions.dart';
@@ -127,6 +128,17 @@ class M3u8Downloader {
         _log('Playlist changed since last attempt; discarded stale segments');
       }
       final tsListToDownload = await _filterExistingSegments(tsList, tempDir);
+      // Show segments already on disk as progress right away, so a resume
+      // starts at its real offset instead of flashing 0/N while the rest
+      // fetch. prepareHlsResume above already discarded any stale segments,
+      // so a changed playlist reports zero here, never the old offset.
+      onProgress(
+        DownloadProgress(
+          countResumedSegments(tempDir, tsList.length),
+          tsList.length,
+          chapter.manga.value!.itemType,
+        ),
+      );
       _log('Downloading ${tsListToDownload.length} segments...');
 
       await _downloadSegmentsWithProgress(
