@@ -1,0 +1,72 @@
+diff --git a/.github/workflows/ios.yml b/.github/workflows/ios.yml
+index 2ab9cdb..341d09c 100644
+--- a/.github/workflows/ios.yml
++++ b/.github/workflows/ios.yml
+@@ -56,6 +56,7 @@ jobs:
+ 
+   build-ios:
+     name: Unsigned .ipa (macOS)
++    needs: check
+     runs-on: macos-15
+     timeout-minutes: 90
+     steps:
+@@ -86,14 +87,55 @@ jobs:
+       # OpenJDK Zero runtime fetched at pod-install time. If this fails, the
+       # fallback is excising the pod + stubbing MihonExtensionService.
+       - name: Build iOS release (unsigned)
+-        run: flutter build ios --release --no-codesign
++        # CI build number = 1000 + workflow run number: monotonic per run
++        # and always above upstream's pubspec build (130), so sideload
++        # tools never see a version regression. Marketing version stays
++        # pubspec's (0.9.97). Identify builds by run id + commit.
++        run: |
++          flutter build ios --release --no-codesign \
++            --build-number=$((1000 + ${{ github.run_number }}))
+       - name: Package unsigned IPA
+         run: |
+           mkdir -p Payload
+           cp -r build/ios/iphoneos/Runner.app Payload/
+           zip -qr simplyMANGA-unsigned.ipa Payload
+-      - uses: actions/upload-artifact@v4
++      - name: Build provenance (build-info.json + SHA256SUMS)
++        run: |
++          SHA=$(shasum -a 256 simplyMANGA-unsigned.ipa | awk '{print $1}')
++          VERSION=$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}' | cut -d+ -f1)
++          cat > build-info.json <<EOF
++          {
++            "repo": "${{ github.repository }}",
++            "run_id": ${{ github.run_id }},
++            "run_number": ${{ github.run_number }},
++            "run_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}",
++            "head_sha": "${{ github.sha }}",
++            "head_branch": "${{ github.ref_name }}",
++            "bundle_id": "com.simplymanga.app",
++            "version": "$VERSION",
++            "build": $((1000 + ${{ github.run_number }})),
++            "ipa_sha256": "$SHA",
++            "built_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
++          }
++          EOF
++          shasum -a 256 simplyMANGA-unsigned.ipa > SHA256SUMS
++          cat build-info.json
++
++      - name: Upload unsigned IPA artifact
++        uses: actions/upload-artifact@v4
+         with:
+           name: simplyMANGA-unsigned-ipa
+           path: simplyMANGA-unsigned.ipa
+-          retention-days: 14
+\ No newline at end of file
++          retention-days: 14
++          if-no-files-found: error
++          compression-level: 0  # .ipa is already a zip; skip double compression
++
++      - name: Upload build provenance
++        uses: actions/upload-artifact@v4
++        with:
++          name: simplyMANGA-build-info
++          path: |
++            build-info.json
++            SHA256SUMS
++          retention-days: 14
++          if-no-files-found: error
