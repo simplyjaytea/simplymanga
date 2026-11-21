@@ -11,6 +11,7 @@ class MainTabletLayout extends StatefulWidget {
   const MainTabletLayout({
     super.key,
     required this.isLongPressed,
+    this.showRail = true,
     required this.location,
     required this.dest,
     required this.currentIndex,
@@ -21,6 +22,7 @@ class MainTabletLayout extends StatefulWidget {
   });
 
   final bool isLongPressed;
+  final bool showRail;
   final String? location;
   final List<String> dest;
   final int currentIndex;
@@ -120,15 +122,12 @@ class _TabletLayoutState extends State<MainTabletLayout> {
 
   @override
   Widget build(BuildContext context) {
-    final destinations = widget.buildNavigationWidgetsDesktop(
-      widget.ref,
-      widget.dest,
-      context,
-    );
-    final railWidth = _getNavigationRailWidth(
-      widget.isLongPressed,
-      widget.location,
-    );
+    final destinations = widget.showRail
+        ? widget.buildNavigationWidgetsDesktop(widget.ref, widget.dest, context)
+        : const <NavigationRailDestination>[];
+    final railWidth = widget.showRail
+        ? _getNavigationRailWidth(widget.isLongPressed, widget.location)
+        : 0.0;
     final railVisible = railWidth > 0;
 
     // On a TV, open with the tab rail focused so the user lands on the tabs and
@@ -185,6 +184,7 @@ class _TabletLayoutState extends State<MainTabletLayout> {
     if (isTv) {
       navRail = FocusScope(node: _railScope, child: navRail);
     }
+    if (!widget.showRail) navRail = const SizedBox.shrink();
 
     Widget content = widget.child;
     if (isTv) {

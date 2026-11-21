@@ -1,5 +1,6 @@
 import 'dart:ui' show SemanticsAction;
 
+import 'package:mangayomi/core/fold/fold_layout.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shiori/shiori.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +9,41 @@ import 'package:mangayomi/modules/anime/widgets/tv_player_pills.dart';
 import 'package:mangayomi/modules/anime/widgets/unified_settings_sheet.dart';
 
 void main() {
+  testWidgets('inner landscape keeps player chrome below the crease', (
+    tester,
+  ) async {
+    const size = Size(890, 626);
+    await _setSurfaceSize(tester, size);
+    final driver = FakeFoldStateDriver(FoldState.innerLandscape);
+    addTearDown(driver.dispose);
+
+    await tester.pumpWidget(
+      _testApp(
+        size: size,
+        child: FoldAwareShell(
+          driver: driver,
+          child: Stack(
+            children: [
+              MobilePlayerControlsOverlayLayout(
+                compactPortrait: false,
+                safeInsets: EdgeInsets.zero,
+                topControls: const SizedBox(height: 24),
+                primaryControls: const SizedBox(height: 40),
+                bottomControls: const SizedBox(height: 80),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final controls = tester.getRect(
+      find.byKey(const ValueKey('mobile-player-controls-overlay-wide')),
+    );
+    expect(controls.top, 345);
+    expect(controls.bottom, 626);
+  });
+
   testWidgets('keeps the mobile top bar below the safe inset', (tester) async {
     const size = Size(320, 568);
     const insets = EdgeInsets.only(top: 44, bottom: 34);

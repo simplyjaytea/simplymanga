@@ -1,3 +1,4 @@
+import 'package:mangayomi/core/fold/fold_layout.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shiori/shiori.dart';
 
@@ -135,7 +136,7 @@ class MobilePlayerControlsOverlayLayout extends StatelessWidget {
       );
     }
 
-    return Column(
+    final wideLayout = Column(
       key: const ValueKey('mobile-player-controls-overlay-wide'),
       children: [
         Padding(
@@ -155,6 +156,17 @@ class MobilePlayerControlsOverlayLayout extends StatelessWidget {
           child: bottomControls,
         ),
       ],
+    );
+    final controlsRegion = FoldLayoutScope.maybeOf(context)
+        ?.spec
+        .controlsRegion;
+    if (controlsRegion == null) return wideLayout;
+    return Positioned(
+      left: 0,
+      right: 0,
+      top: controlsRegion.top,
+      bottom: 0,
+      child: wideLayout,
     );
   }
 }

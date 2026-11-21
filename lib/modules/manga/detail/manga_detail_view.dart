@@ -1,3 +1,4 @@
+import 'package:mangayomi/core/fold/fold_layout.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mangayomi/modules/manga/detail/widgets/missing_chapters_label.dart';
 import 'package:mangayomi/modules/manga/detail/widgets/chapter_selection_reset_scope.dart';
@@ -184,6 +185,14 @@ class _MangaDetailViewState extends ConsumerState<MangaDetailView>
   }
 
   Widget _buildWidget({required List<Chapter> chapters}) {
+    final layoutSpec =
+        FoldLayoutScope.maybeOf(context)?.spec ??
+        FoldLayoutSpec.resolve(
+          foldState: FoldState.unknown,
+          size: MediaQuery.sizeOf(context),
+        );
+    final useTwoPaneDetail = layoutSpec.usesTwoPaneDetail;
+    final hasVerticalCrease = layoutSpec.foldState == FoldState.innerPortrait;
     final chapterList = ref.watch(chaptersListStateProvider);
     final current = resumeChapterFor(
       widget.manga!,
@@ -213,20 +222,34 @@ class _MangaDetailViewState extends ConsumerState<MangaDetailView>
           body: SafeArea(
             child: Row(
               children: [
-                if (context.isTablet)
+                if (useTwoPaneDetail)
                   SizedBox(
-                    width: context.width(0.5),
+                    width: hasVerticalCrease
+                        ? (context.width(1) -
+                                  FoldLayoutSpec.creaseBandWidth -
+                                  2 * ShioriSpace.s16) /
+                              2
+                        : context.width(0.5),
                     height: context.height(1),
-                    child: SingleChildScrollView(
-                      child: MangaInfoHeader(
-                        manga: widget.manga!,
-                        isLocalArchive: isLocalArchive,
-                        titleDescription: widget.titleDescription!,
-                        action: widget.action!,
-                        chapterLength: chapters.length,
-                        onJumpToCurrent: onJumpToCurrent,
+                    child: Padding(
+                      padding: hasVerticalCrease
+                          ? const EdgeInsets.only(left: ShioriSpace.s16)
+                          : EdgeInsets.zero,
+                      child: SingleChildScrollView(
+                        child: MangaInfoHeader(
+                          manga: widget.manga!,
+                          isLocalArchive: isLocalArchive,
+                          titleDescription: widget.titleDescription!,
+                          action: widget.action!,
+                          chapterLength: chapters.length,
+                          onJumpToCurrent: onJumpToCurrent,
+                        ),
                       ),
                     ),
+                  ),
+                if (hasVerticalCrease)
+                  SizedBox(
+                    width: FoldLayoutSpec.creaseBandWidth + 2 * ShioriSpace.s16,
                   ),
                 Expanded(
                   child: Scrollbar(
@@ -238,7 +261,11 @@ class _MangaDetailViewState extends ConsumerState<MangaDetailView>
                       controller: _scrollController,
                       slivers: [
                         SliverPadding(
-                          padding: const EdgeInsets.only(top: 0, bottom: 60),
+                          padding: EdgeInsets.only(
+                            top: 0,
+                            bottom: 60,
+                            right: hasVerticalCrease ? ShioriSpace.s16 : 0,
+                          ),
                           sliver: SuperSliverList.builder(
                             listController: _listController,
                             itemCount: chapters.length + 1,
@@ -246,7 +273,7 @@ class _MangaDetailViewState extends ConsumerState<MangaDetailView>
                               final l10n = l10nLocalizations(context)!;
                               int finalIndex = index - 1;
                               if (index == 0) {
-                                return context.isTablet
+                                return useTwoPaneDetail
                                     ? Column(
                                         children: [
                                           Padding(
