@@ -19,6 +19,7 @@ export 'src/components/icon.dart';
 export 'src/components/list_row.dart';
 export 'src/components/loading.dart';
 export 'src/components/menu.dart';
+export 'src/components/overlay.dart';
 export 'src/components/overlay_controls.dart';
 export 'src/components/overlay_label.dart';
 export 'src/components/prompt.dart';
