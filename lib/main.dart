@@ -13,6 +13,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:mangayomi/core/fold/fold_modal.dart';
+import 'package:mangayomi/core/fold/fold_state_provider.dart';
 import 'package:mangayomi/eval/model/m_bridge.dart';
 import 'package:mangayomi/models/custom_button.dart';
 import 'package:mangayomi/models/manga.dart';
@@ -478,13 +480,21 @@ class _MyAppState extends ConsumerState<MyApp>
         final withBackHandler = !isMobile
             ? _MouseBackButtonHandler(router: router, child: base)
             : base;
+        // Fold-aware overlays: publish the settled posture's rooms above the
+        // Navigator so sheets and dialogs — including ones already open —
+        // re-present into the surviving room on a fold, clearing the crease.
+        // Route identity is untouched; the routed branch never remounts.
+        final withFoldOverlays = FoldOverlayScope(
+          driver: ref.watch(foldStateControllerProvider),
+          child: withBackHandler,
+        );
 
         final locked =
             !Platform.isLinux &&
             ref.watch(appLockEnabledStateProvider) &&
             !ref.watch(appUnlockedStateProvider);
         return AppLayers(
-          app: withBackHandler,
+          app: withFoldOverlays,
           covers: [
             if (locked) const AppLockScreen(key: ValueKey(AppLockScreen)),
             // Above the lock screen, because a measurement is not worth

@@ -35,6 +35,8 @@ Future<void> customDraggableTabBar({
   ValueListenable<bool>? seeThrough,
 }) {
   assert(tabs.length == children.length, 'One child per tab.');
+  final invokedSide = shioriInvokedSide(context);
+  const maxHeightFactor = 0.85;
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -52,15 +54,21 @@ Future<void> customDraggableTabBar({
       ),
     ),
     constraints: BoxConstraints(
-      maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+      maxHeight: MediaQuery.sizeOf(context).height * maxHeightFactor,
       maxWidth: fullWidth ? double.infinity : 720,
     ),
-    builder: (sheetContext) => _TabbedSheet(
-      tabs: tabs,
-      moreWidget: moreWidget,
-      seeThroughTab: seeThroughTab,
-      seeThrough: seeThrough,
-      children: children,
+    // On a foldable, the frame docks the sheet into the surviving room on a
+    // settled fold; the route and the tab state stay exactly where they are.
+    builder: (sheetContext) => ShioriSheetFrame(
+      invokedSide: invokedSide,
+      maxHeightFactor: maxHeightFactor,
+      child: _TabbedSheet(
+        tabs: tabs,
+        moreWidget: moreWidget,
+        seeThroughTab: seeThroughTab,
+        seeThrough: seeThrough,
+        children: children,
+      ),
     ),
   );
 }

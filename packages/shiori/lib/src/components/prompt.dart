@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../tokens.dart';
 import 'button.dart';
 import 'dialog.dart';
+import 'overlay.dart';
 
 /// Asks for a line of text: a name, a URL, a password. Resolves to the text
 /// confirmed, or null when the dialog is cancelled.
@@ -24,6 +25,7 @@ Future<String?> showShioriPrompt(
   TextInputType? keyboardType,
   String? Function(String text)? validator,
 }) {
+  final invokedSide = shioriInvokedSide(context);
   return showDialog<String>(
     context: context,
     builder: (_) => _Prompt(
@@ -38,6 +40,7 @@ Future<String?> showShioriPrompt(
       maxLines: maxLines,
       keyboardType: keyboardType,
       validator: validator,
+      invokedSide: invokedSide,
     ),
   );
 }
@@ -55,6 +58,7 @@ class _Prompt extends StatefulWidget {
     required this.maxLines,
     required this.keyboardType,
     required this.validator,
+    required this.invokedSide,
   });
 
   final String title;
@@ -68,6 +72,7 @@ class _Prompt extends StatefulWidget {
   final int maxLines;
   final TextInputType? keyboardType;
   final String? Function(String text)? validator;
+  final ShioriOverlaySide? invokedSide;
 
   @override
   State<_Prompt> createState() => _PromptState();
@@ -109,6 +114,7 @@ class _PromptState extends State<_Prompt> {
   Widget build(BuildContext context) {
     return ShioriDialog(
       title: widget.title,
+      invokedSide: widget.invokedSide,
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
