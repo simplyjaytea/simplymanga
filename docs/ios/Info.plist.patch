@@ -1,0 +1,15 @@
+diff --git a/ios/Runner/Info.plist b/ios/Runner/Info.plist
+--- a/ios/Runner/Info.plist
++++ b/ios/Runner/Info.plist
+@@ -45,6 +45,11 @@
+ 	<array>
+ 		<string>audio</string>
+ 		<string>fetch</string>
++		<string>processing</string>
++	</array>
++	<key>BGTaskSchedulerPermittedIdentifiers</key>
++	<array>
++		<string>com.kodjodevf.mangayomi.background-download</string>
+ 	</array>
+ 	<key>NSFaceIDUsageDescription</key>
+ 	<string>simplyMANGA needs to authenticate using Face ID.</string>
