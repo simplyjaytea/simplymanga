@@ -3801,6 +3801,18 @@ abstract class AppLocalizations {
   /// **'Add repo URL'**
   String get add_extensions_repo;
 
+  /// No description provided for @curated_sources.
+  ///
+  /// In en, this message translates to:
+  /// **'Curated sources'**
+  String get curated_sources;
+
+  /// No description provided for @curated_sources_subtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended repositories, checked for this library'**
+  String get curated_sources_subtitle;
+
   /// No description provided for @remove_extensions_repo.
   ///
   /// In en, this message translates to:

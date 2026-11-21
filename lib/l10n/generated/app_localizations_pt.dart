@@ -2081,6 +2081,13 @@ class AppLocalizationsPt extends AppLocalizations {
   String get add_extensions_repo => 'Adicionar URL do repositório';
 
   @override
+  String get curated_sources => 'Curated sources';
+
+  @override
+  String get curated_sources_subtitle =>
+      'Recommended repositories, checked for this library';
+
+  @override
   String get remove_extensions_repo => 'Remover URL do repositório';
 
   @override

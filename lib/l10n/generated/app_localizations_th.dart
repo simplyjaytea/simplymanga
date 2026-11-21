@@ -2063,6 +2063,13 @@ class AppLocalizationsTh extends AppLocalizations {
   String get add_extensions_repo => 'เพิ่ม URL ที่เก็บข้อมูล';
 
   @override
+  String get curated_sources => 'Curated sources';
+
+  @override
+  String get curated_sources_subtitle =>
+      'Recommended repositories, checked for this library';
+
+  @override
   String get remove_extensions_repo => 'ลบ URL ที่เก็บข้อมูล';
 
   @override

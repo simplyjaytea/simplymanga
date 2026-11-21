@@ -10,6 +10,8 @@ import 'package:mangayomi/models/source.dart';
 import 'package:mangayomi/repositories/source_repository.dart';
 import 'package:mangayomi/services/extension_update.dart';
 import 'package:mangayomi/modules/more/settings/browse/providers/browse_state_provider.dart';
+import 'package:mangayomi/modules/more/settings/browse/widgets/curated_sources_sheet.dart';
+import 'package:mangayomi/services/curated_repositories.dart';
 import 'package:mangayomi/providers/l10n_providers.dart';
 import 'package:mangayomi/services/fetch_item_sources.dart';
 import 'package:mangayomi/utils/error_toast.dart';
@@ -111,14 +113,22 @@ class _SourceRepositoriesState extends ConsumerState<SourceRepositories> {
           ? ShioriEmptyState(
               icon: Symbols.source_rounded,
               title: l10n.empty_extensions_repo,
-              actionLabel: l10n.add_extensions_repo,
-              onAction: () => _showAddRepoDialog(context),
+              message: l10n.curated_sources_subtitle,
+              // The suggestions are the shortest way out of an empty Browse;
+              // the always-present button still takes any address by hand.
+              actionLabel: l10n.curated_sources,
+              onAction: () => _showCuratedSources(context),
             )
           : ListView.builder(
               padding: const EdgeInsets.only(bottom: ShioriSpace.s48 * 2),
-              itemCount: repositories.length,
+              // One extra row: the suggestions, above the repositories the
+              // reader already has.
+              itemCount: repositories.length + 1,
               itemBuilder: (context, index) {
-                final repo = repositories[index];
+                if (index == 0) {
+                  return _curatedSourcesRow(context, repositories);
+                }
+                final repo = repositories[index - 1];
                 final isHidden = repo.hidden ?? false;
                 final count = sourceCounts[repo.jsonUrl] ?? 0;
                 return ShioriListRow(
@@ -234,6 +244,35 @@ class _SourceRepositoriesState extends ConsumerState<SourceRepositories> {
         .read(extensionsRepoStateProvider(widget.itemType).notifier)
         .set(repos);
     await _removeOrphanSources(removedRepo);
+  }
+
+  /// The way into the suggested repositories for this library. A row of its
+  /// own, not an app-bar action, because it is where a reader who has no idea
+  /// what a repository URL is will look.
+  Widget _curatedSourcesRow(BuildContext context, List<Repo> repositories) {
+    final l10n = context.l10n;
+    final missing = missingCuratedRepositories(
+      widget.itemType,
+      repositories.map((repo) => repo.jsonUrl),
+    );
+    return ShioriSettingRow(
+      icon: Symbols.auto_awesome_rounded,
+      title: l10n.curated_sources,
+      // Once every suggestion is in, the row stops suggesting.
+      subtitle: missing.isEmpty
+          ? l10n.installed
+          : l10n.curated_sources_subtitle,
+      trailing: const Icon(Symbols.chevron_right_rounded),
+      onTap: () => _showCuratedSources(context),
+    );
+  }
+
+  Future<void> _showCuratedSources(BuildContext context) {
+    return showShioriSheet<void>(
+      context,
+      title: context.l10n.curated_sources,
+      builder: (_) => CuratedSourcesSheet(itemType: widget.itemType),
+    );
   }
 
   Future<void> _showAddRepoDialog(BuildContext context) async {

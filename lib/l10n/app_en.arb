@@ -781,6 +781,8 @@
   "undefined": "undefined",
   "empty_extensions_repo": "You don't have any repository urls here. Click on the plus button to add one!",
   "add_extensions_repo": "Add repo URL",
+  "curated_sources": "Curated sources",
+  "curated_sources_subtitle": "Recommended repositories, checked for this library",
   "remove_extensions_repo": "Remove repo URL",
   "manage_manga_repo_urls": "Manage Manga Repo URLs",
   "manage_anime_repo_urls": "Manage Anime Repo URLs",

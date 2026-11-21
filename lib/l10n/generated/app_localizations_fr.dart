@@ -2090,6 +2090,13 @@ class AppLocalizationsFr extends AppLocalizations {
   String get add_extensions_repo => 'Ajouter une URL de dépôt';
 
   @override
+  String get curated_sources => 'Curated sources';
+
+  @override
+  String get curated_sources_subtitle =>
+      'Recommended repositories, checked for this library';
+
+  @override
   String get remove_extensions_repo => 'Supprimer l\'URL du dépôt';
 
   @override
