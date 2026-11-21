@@ -15,6 +15,7 @@ import 'package:mangayomi/services/http/rhttp/src/model/settings.dart';
 import 'package:mangayomi/services/download_manager/download_retry.dart';
 import 'package:mangayomi/services/download_manager/m3u8/models/download.dart';
 import 'package:mangayomi/services/download_manager/m3u8/models/ts_info.dart';
+import 'package:mangayomi/services/download_manager/m3u8/resume_manifest.dart';
 import 'package:mangayomi/services/download_manager/download_isolate_pool.dart';
 import 'package:mangayomi/services/download_manager/m_downloader.dart';
 import 'package:mangayomi/utils/extensions/string_extensions.dart';
@@ -112,6 +113,18 @@ class M3u8Downloader {
 
       if (tsList.isEmpty) {
         throw M3u8DownloaderException('Playlist contains no media segments');
+      }
+      // Pin cached segments to the resolved playlist. A playlist that changed
+      // under the same URL (new variant, fresh tokens, shifted live window)
+      // must not splice stale index-named segments into the new merge.
+      final resumeFingerprint = hlsResumeFingerprint(
+        segments: tsList,
+        key: key,
+        iv: iv,
+        mediaSequence: mediaSequence,
+      );
+      if (await prepareHlsResume(tempDir, resumeFingerprint)) {
+        _log('Playlist changed since last attempt; discarded stale segments');
       }
       final tsListToDownload = await _filterExistingSegments(tsList, tempDir);
       _log('Downloading ${tsListToDownload.length} segments...');

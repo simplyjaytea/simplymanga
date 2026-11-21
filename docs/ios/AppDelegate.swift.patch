@@ -1,0 +1,43 @@
+diff --git a/ios/Runner/AppDelegate.swift b/ios/Runner/AppDelegate.swift
+--- a/ios/Runner/AppDelegate.swift
++++ b/ios/Runner/AppDelegate.swift
+@@ -4,6 +4,7 @@
+ import MediaPlayer
+ import Libmtorrentserver
+ import UniformTypeIdentifiers
++import BackgroundTasks
+ 
+ @main
+ @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate {
+@@ -31,6 +32,14 @@
+     _ application: UIApplication,
+     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+   ) -> Bool {
++    if #available(iOS 13.0, *) {
++      BGTaskScheduler.shared.register(
++        forTaskWithIdentifier: BackgroundDownloadSession.processingTaskIdentifier,
++        using: nil
++      ) { task in
++        BackgroundDownloadSession.shared.handleProcessingTask(task as! BGProcessingTask)
++      }
++    }
+     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+   }
+ 
+@@ -96,6 +105,16 @@
+       default:
+         result(FlutterMethodNotImplemented)
+       }
++    })
++
++    let backgroundDownloadChannel = FlutterMethodChannel(
++      name: "com.kodjodevf.mangayomi.background_download",
++      binaryMessenger: messenger
++    )
++    BackgroundDownloadSession.shared.attach(channel: backgroundDownloadChannel)
++    backgroundDownloadChannel.setMethodCallHandler({
++      (call: FlutterMethodCall, result: @escaping FlutterResult) -> Void in
++      BackgroundDownloadSession.shared.handle(call: call, result: result)
+     })
+ 
+     let volumeChannel = FlutterMethodChannel(
