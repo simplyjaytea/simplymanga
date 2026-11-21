@@ -65,6 +65,9 @@ Future<void> downloadChapter(
       return;
     }
     chapter = current;
+    // FIFO: remember when this download arrived so unranked downloads run in
+    // enqueue order, not chapter-id order.
+    DownloadQueueOrder.recordArrival(current.id!);
   } catch (_) {
     keepAlive.close();
     rethrow;
@@ -582,6 +585,9 @@ Future<void> downloadChapter(
     await progressWrites.catchError((Object _) {});
     if (acquired) DownloadGate.instance.release(sourceKey);
     unscheduleDownload(chapter.id);
+    // Terminal exit (done, failed, cancelled or paused): drop the FIFO arrival
+    // so a later re-request queues at the back instead of jumping the queue.
+    DownloadQueueOrder.forgetArrival(chapter.id!);
     keepAlive.close();
   }
 }

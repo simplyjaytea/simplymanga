@@ -10,6 +10,8 @@ import 'package:mangayomi/modules/manga/download/providers/download_provider.dar
 import 'package:mangayomi/modules/manga/download/providers/download_gate.dart';
 import 'package:mangayomi/providers/l10n_providers.dart';
 import 'package:mangayomi/services/download_manager/download_queue_order.dart';
+import 'package:mangayomi/services/download_manager/download_queue_progress.dart';
+import 'package:mangayomi/modules/more/download_queue/download_queue_progress_header.dart';
 import 'package:mangayomi/utils/extensions/chapter_extensions.dart';
 import 'package:mangayomi/modules/widgets/tv_menu.dart';
 import 'package:mangayomi/utils/platform_utils.dart';
@@ -126,7 +128,26 @@ class _DownloadQueueScreenState extends ConsumerState<DownloadQueueScreen> {
               ),
             ],
           ),
-          body: ReorderableListView.builder(
+          body: Column(
+            children: [
+              // Fold-aware aggregate progress across the whole queue (D3):
+              // active/waiting counts, an overall bar and percent. Reacts to
+              // pause and scheduling as well as the download stream above.
+              ListenableBuilder(
+                listenable: Listenable.merge([
+                  downloadsPaused,
+                  scheduledDownloads,
+                ]),
+                builder: (context, _) => DownloadQueueProgressHeader(
+                  progress: DownloadQueueProgress.from(
+                    entries,
+                    scheduledIds: scheduledDownloads.value,
+                    paused: downloadsPaused.value,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: ReorderableListView.builder(
             buildDefaultDragHandles: false,
             itemCount: entries.length,
             // onReorderItem already accounts for the item being lifted out at
@@ -147,6 +168,9 @@ class _DownloadQueueScreenState extends ConsumerState<DownloadQueueScreen> {
               final element = entries[index];
               return _buildRow(context, l10n, entries, element, index);
             },
+                ),
+              ),
+            ],
           ),
         );
       },
