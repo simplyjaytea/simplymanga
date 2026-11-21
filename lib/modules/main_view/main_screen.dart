@@ -1,3 +1,5 @@
+import 'package:mangayomi/core/fold/fold_layout.dart';
+import 'package:mangayomi/core/fold/fold_state_provider.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -260,19 +262,21 @@ class _MainScreenState extends ConsumerState<MainScreen>
                             notification,
                             useFloatingNav: useFloatingNav,
                           ),
-                          child: prefersNavRail
-                              ? MainTabletLayout(
-                                  isLongPressed: isLongPressed,
-                                  location: location,
-                                  dest: dest,
-                                  currentIndex: currentIndex,
-                                  route: route,
-                                  ref: ref,
-                                  buildNavigationWidgetsDesktop: _navBuilders
-                                      .buildNavigationWidgetsDesktop,
-                                  child: widget.child,
-                                )
-                              : widget.child,
+                          child: FoldAwareShell(
+                            driver: ref.watch(foldStateControllerProvider),
+                            child: MainTabletLayout(
+                              isLongPressed: isLongPressed,
+                              showRail: prefersNavRail,
+                              location: location,
+                              dest: dest,
+                              currentIndex: currentIndex,
+                              route: route,
+                              ref: ref,
+                              buildNavigationWidgetsDesktop:
+                                  _navBuilders.buildNavigationWidgetsDesktop,
+                              child: widget.child,
+                            ),
+                          ),
                         ),
                         bottomNavigationBar: prefersNavRail
                             ? null
