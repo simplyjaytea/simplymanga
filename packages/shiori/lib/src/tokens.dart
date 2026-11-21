@@ -460,8 +460,16 @@ abstract final class ShioriMotion {
   /// Something moving within the screen: a pill, a tab indicator.
   static const Duration standard = Duration(milliseconds: 220);
 
+  /// [standard] under the fast / medium / slow vocabulary. One scale, two
+  /// names: a caller that thinks in sizes rather than roles must still land
+  /// on a value the scale contains.
+  static const Duration medium = standard;
+
   /// Something arriving: sheets, dialogs, routes, the shared cover.
   static const Duration enter = Duration(milliseconds: 350);
+
+  /// [enter] under the same vocabulary as [medium].
+  static const Duration slow = enter;
 
   /// Something stepping back: the reader's chrome, the shrinking bar.
   static const Duration exitSlow = Duration(milliseconds: 500);
@@ -470,9 +478,30 @@ abstract final class ShioriMotion {
   /// transition, so it never runs on the curves below.
   static const Duration ambient = Duration(milliseconds: 1100);
 
+  /// The curve set is closed like the rest of the tokens: standard for
+  /// within-screen movement, emphasized for arriving, decelerate for an
+  /// arrival that must be seen from its first frame, accelerate for a
+  /// departure. They keep the `*Curve` suffix because `standard` and the
+  /// other size words are already taken by the durations.
   static const Curve standardCurve = Cubic(0.2, 0, 0, 1);
   static const Curve enterCurve = Cubic(0.05, 0.7, 0.1, 1);
   static const Curve exitCurve = Cubic(0.3, 0, 0.8, 0.15);
+
+  /// [enterCurve] under its other name (Material's "emphasized").
+  static const Curve emphasizedCurve = enterCurve;
+
+  /// Fast out, then settle. An arrival is not a departure played backwards:
+  /// the eye is on the first frames of the one and the last frames of the
+  /// other, so they do not share a curve.
+  static const Curve decelerateCurve = Cubic(0, 0, 0, 1);
+
+  /// [exitCurve] under its other name (Material's "emphasized-accelerate").
+  static const Curve accelerateCurve = exitCurve;
+
+  /// How far a pressed surface steps towards its reader. A press is a state
+  /// change, not a movement, so this is a short step from rest — read as
+  /// weight, never as travel. Buttons and covers press to it.
+  static const double pressedScale = 0.97;
 
   /// Whether the platform asks for no animation at all (Android's "Remove
   /// animations", an accessibility service, a test).
