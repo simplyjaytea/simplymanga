@@ -23,6 +23,23 @@ is removed without a recorded reason.
 | Upstream CI workflows deactivated | moved to `.github/workflows-upstream/` | they build upstream's release pipeline, not ours |
 | New CI: path-filtered Linux analyze/test + macOS unsigned .ipa | `.github/workflows/ios.yml` | this VPS is Linux; iOS binaries come from CI |
 
+## Phase 0 closure notes
+
+- **media-kit override family:** the forked media-kit packages reference each
+  other via git at HEAD inside their own pubspecs, so pinning only the root
+  deps breaks pub version solving. All eight media-kit packages are pinned
+  via `dependency_overrides` to one commit. Lockfile diff is metadata-only
+  (ref strings + dependency labels); zero resolved-version changes.
+- **MethodChannel names preserved:** `com.kodjodevf.mangayomi.volume_keys`
+  and `.screen_brightness` must match the native registrars; they are
+  protocol identifiers, not branding.
+- **Test updated:** `test/services/crash_report_test.dart` asserted the
+  upstream issues URL; updated to the fork (the only suite change).
+- **Local gate results (2026-11-21):** `flutter analyze` — no issues (61 s);
+  full `flutter test` — 1207 passed, 5 skipped, 1 failed (the URL assertion
+  above, fixed and re-verified). clang 18 installed: `flutter_qjs`'s native
+  build hook requires it on Linux (CI ubuntu runners ship it).
+
 ## Deliberately NOT renamed (compatibility)
 
 - **Dart package name `mangayomi`** — 959 files import `package:mangayomi/…`;

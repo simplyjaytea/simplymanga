@@ -138,6 +138,49 @@ dependency_overrides:
       url: https://github.com/kodjodevf/plus_plugins.git
       path: packages/device_info_plus/device_info_plus
       ref: 9a4db3e93f55dbf0713d3ca23f43985873d15f3a
+  # The forked media-kit packages reference each other via git at HEAD inside
+  # their own pubspecs; pinning only the root deps makes pub treat those as
+  # conflicting sources. Override the whole family to one commit.
+  media_kit:
+    git:
+      url: https://github.com/kodjodevf/media-kit.git
+      path: media_kit
+      ref: 0596bb4a94017a7c380f068a1cf6eb6ac7b3199a
+  media_kit_video:
+    git:
+      url: https://github.com/kodjodevf/media-kit.git
+      path: media_kit_video
+      ref: 0596bb4a94017a7c380f068a1cf6eb6ac7b3199a
+  media_kit_libs_video:
+    git:
+      url: https://github.com/kodjodevf/media-kit.git
+      path: libs/universal/media_kit_libs_video
+      ref: 0596bb4a94017a7c380f068a1cf6eb6ac7b3199a
+  media_kit_libs_android_video:
+    git:
+      url: https://github.com/kodjodevf/media-kit.git
+      path: libs/android/media_kit_libs_android_video
+      ref: 0596bb4a94017a7c380f068a1cf6eb6ac7b3199a
+  media_kit_libs_ios_video:
+    git:
+      url: https://github.com/kodjodevf/media-kit.git
+      path: libs/ios/media_kit_libs_ios_video
+      ref: 0596bb4a94017a7c380f068a1cf6eb6ac7b3199a
+  media_kit_libs_linux:
+    git:
+      url: https://github.com/kodjodevf/media-kit.git
+      path: libs/linux/media_kit_libs_linux
+      ref: 0596bb4a94017a7c380f068a1cf6eb6ac7b3199a
+  media_kit_libs_macos_video:
+    git:
+      url: https://github.com/kodjodevf/media-kit.git
+      path: libs/macos/media_kit_libs_macos_video
+      ref: 0596bb4a94017a7c380f068a1cf6eb6ac7b3199a
+  media_kit_libs_windows_video:
+    git:
+      url: https://github.com/kodjodevf/media-kit.git
+      path: libs/windows/media_kit_libs_windows_video
+      ref: 0596bb4a94017a7c380f068a1cf6eb6ac7b3199a
 
 dev_dependencies:
   flutter_test:
