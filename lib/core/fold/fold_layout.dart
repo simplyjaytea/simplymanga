@@ -1,7 +1,10 @@
 import 'dart:async';
 
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/widgets.dart';
 import 'package:shiori/shiori.dart';
+
+import 'fold_transition.dart';
 
 /// Settled display postures reported by the platform fold channel.
 ///
@@ -31,9 +34,19 @@ class FoldStateController implements FoldStateDriver {
   final Duration debounce;
   final StreamController<FoldState> _states =
       StreamController<FoldState>.broadcast();
+  final FoldTransitionController _transitions = FoldTransitionController();
   Timer? _settleTimer;
   FoldState _currentState;
   bool _disposed = false;
+
+  /// Last live viewport size reported by the shell (every metrics tick).
+  Size _liveSize = Size.zero;
+
+  /// A settled change waiting for the settle frame's live size reports.
+  FoldState? _pendingPrevious;
+  Size _pendingPreviousSize = Size.zero;
+  Size? _pendingNextSize;
+  bool _completionScheduled = false;
 
   @override
   FoldState get currentState => _currentState;
@@ -41,21 +54,84 @@ class FoldStateController implements FoldStateDriver {
   @override
   Stream<FoldState> get states => _states.stream;
 
+  /// The settled-transition seam (C1 spec 6.2A): one [FoldTransition] per
+  /// settled change, never per live tick. Exposed through [FoldLayoutScope].
+  FoldTransitionController get transitions => _transitions;
+
   void report(FoldState state) {
     if (_disposed) return;
     _settleTimer?.cancel();
     _settleTimer = Timer(debounce, () => _settle(state));
   }
 
+  /// Reports the live viewport size. Cheap; called on every layout tick.
+  ///
+  /// Completion of a pending settled transition is deferred to a microtask
+  /// so every shell reporting in the same post-frame batch contributes
+  /// first: the LAST report wins. In the production nested topology
+  /// (root shell + reader shell sharing this controller) the innermost
+  /// shell reports last, so both transition endpoints come from one
+  /// viewport source instead of mixing the outer shell's nextSize with the
+  /// inner shell's previousSize.
+  void reportSize(Size size) {
+    if (_disposed) return;
+    _liveSize = size;
+    if (_pendingPrevious != null) {
+      _pendingNextSize = size;
+      if (!_completionScheduled) {
+        _completionScheduled = true;
+        scheduleMicrotask(_completePendingTransition);
+      }
+    }
+  }
+
+  void _completePendingTransition() {
+    _completionScheduled = false;
+    if (_disposed) return;
+    final previous = _pendingPrevious;
+    final nextSize = _pendingNextSize;
+    _pendingPrevious = null;
+    _pendingNextSize = null;
+    if (previous == null || nextSize == null) return;
+    _transitions.notify(
+      FoldTransition(
+        previous: previous,
+        next: _currentState,
+        previousSize: _pendingPreviousSize,
+        nextSize: nextSize,
+        settledAt: DateTime.now(),
+      ),
+    );
+  }
+
   void dispose() {
     if (_disposed) return;
     _disposed = true;
     _settleTimer?.cancel();
+    _transitions.dispose();
     unawaited(_states.close());
   }
 
   void _settle(FoldState state) {
     if (_disposed || state == _currentState) return;
+    // A previous settle that never saw a live size report (headless use)
+    // still emits exactly once, with the best-known size as its endpoint.
+    final stalePrevious = _pendingPrevious;
+    if (stalePrevious != null) {
+      _pendingPrevious = null;
+      _pendingNextSize = null;
+      _transitions.notify(
+        FoldTransition(
+          previous: stalePrevious,
+          next: _currentState,
+          previousSize: _pendingPreviousSize,
+          nextSize: _liveSize,
+          settledAt: DateTime.now(),
+        ),
+      );
+    }
+    _pendingPrevious = _currentState;
+    _pendingPreviousSize = _liveSize;
     _currentState = state;
     _states.add(state);
   }
@@ -174,11 +250,25 @@ class FoldLayoutSpec {
 
 /// The shell keeps the routed child at the same element-tree position while
 /// exposing the settled layout contract to screens that need room geometry.
+///
+/// C1 seam (spec 6.2A): the shell also feeds live viewport sizes to the
+/// controller and forwards each settled [FoldTransition] to [onSettled] —
+/// the one place readers may run expensive reflow. Delivery is post-frame so
+/// listeners never run during build.
 class FoldAwareShell extends StatefulWidget {
-  const FoldAwareShell({super.key, required this.driver, required this.child});
+  const FoldAwareShell({
+    super.key,
+    required this.driver,
+    required this.child,
+    this.onSettled,
+  });
 
   final FoldStateDriver driver;
   final Widget child;
+
+  /// Called exactly once per settled posture change (previous != next),
+  /// never on live metrics ticks. Optional; media-agnostic.
+  final void Function(FoldTransition transition)? onSettled;
 
   @override
   State<FoldAwareShell> createState() => _FoldAwareShellState();
@@ -187,6 +277,7 @@ class FoldAwareShell extends StatefulWidget {
 class _FoldAwareShellState extends State<FoldAwareShell> {
   late FoldState _foldState = widget.driver.currentState;
   StreamSubscription<FoldState>? _subscription;
+  StreamSubscription<FoldTransition>? _transitionSubscription;
 
   @override
   void initState() {
@@ -199,6 +290,7 @@ class _FoldAwareShellState extends State<FoldAwareShell> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.driver != widget.driver) {
       _subscription?.cancel();
+      _transitionSubscription?.cancel();
       _foldState = widget.driver.currentState;
       _subscribe();
     }
@@ -208,11 +300,21 @@ class _FoldAwareShellState extends State<FoldAwareShell> {
     _subscription = widget.driver.states.listen((state) {
       if (mounted) setState(() => _foldState = state);
     });
+    final driver = widget.driver;
+    if (driver is FoldStateController) {
+      _transitionSubscription = driver.transitions.transitions.listen((
+        transition,
+      ) {
+        if (!mounted) return;
+        widget.onSettled?.call(transition);
+      });
+    }
   }
 
   @override
   void dispose() {
     _subscription?.cancel();
+    _transitionSubscription?.cancel();
     super.dispose();
   }
 
@@ -220,12 +322,23 @@ class _FoldAwareShellState extends State<FoldAwareShell> {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final spec = FoldLayoutSpec.resolve(
-          foldState: _foldState,
-          size: Size(constraints.maxWidth, constraints.maxHeight),
-        );
+        final size = Size(constraints.maxWidth, constraints.maxHeight);
+        final spec = FoldLayoutSpec.resolve(foldState: _foldState, size: size);
+        final driver = widget.driver;
+        if (driver is FoldStateController) {
+          // Live size feeds the settled-transition endpoints. Delivered
+          // post-frame so onSettled listeners never run during build; the
+          // last report in the settle frame's batch completes its
+          // FoldTransition (innermost shell wins when shells nest).
+          SchedulerBinding.instance.addPostFrameCallback((_) {
+            if (mounted) driver.reportSize(size);
+          });
+        }
         return FoldLayoutScope(
           spec: spec,
+          transitions: driver is FoldStateController
+              ? driver.transitions
+              : null,
           child: KeyedSubtree(
             key: const ValueKey('fold-aware-routed-content'),
             child: widget.child,
@@ -237,9 +350,18 @@ class _FoldAwareShellState extends State<FoldAwareShell> {
 }
 
 class FoldLayoutScope extends InheritedWidget {
-  const FoldLayoutScope({super.key, required this.spec, required super.child});
+  const FoldLayoutScope({
+    super.key,
+    required this.spec,
+    required super.child,
+    this.transitions,
+  });
 
   final FoldLayoutSpec spec;
+
+  /// The settled-transition seam (C1 spec 6.2A), when the shell's driver is
+  /// a [FoldStateController]. Null for bare scopes built without a shell.
+  final FoldTransitionController? transitions;
 
   static FoldLayoutScope? maybeOf(BuildContext context) =>
       context.dependOnInheritedWidgetOfExactType<FoldLayoutScope>();
@@ -255,7 +377,8 @@ class FoldLayoutScope extends InheritedWidget {
       spec.foldState != oldWidget.spec.foldState ||
       spec.creaseBand != oldWidget.spec.creaseBand ||
       spec.density != oldWidget.spec.density ||
-      spec.usesTwoPaneDetail != oldWidget.spec.usesTwoPaneDetail;
+      spec.usesTwoPaneDetail != oldWidget.spec.usesTwoPaneDetail ||
+      transitions != oldWidget.transitions;
 }
 
 /// Positions two detail rooms without changing their element-tree parents.
