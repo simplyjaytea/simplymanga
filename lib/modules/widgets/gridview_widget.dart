@@ -143,34 +143,41 @@ class _GridViewWidgetState extends State<GridViewWidget> {
             .resolve(TextDirection.ltr);
     final foldAware = !isTv && spec != null && spec.hasTwoRooms;
     final band = foldAware ? spec.creaseBand : null;
-    // Only a vertical band can bisect columns; the band arrives in
-    // window-local coordinates, so shift it into the grid's own frame.
-    final verticalBand = (band != null && band.height > band.width)
-        ? band.shift(Offset(-padding.left, 0))
-        : null;
-    final delegate = widget.gridSize == null || widget.gridSize == 0
-        ? FoldGridDelegate(
-            childAspectRatio: widget.childAspectRatio!,
-            // Denser default on TV: from across a room 220px covers show
-            // only ~4 huge tiles; 150 gives more, smaller covers.
-            maxCrossAxisExtent: isTv ? 150 : 220,
-            crossAxisSpacing: isTv ? 10 : 0,
-            mainAxisSpacing: isTv ? 10 : 0,
-            creaseBand: verticalBand,
-            forceEvenColumns: foldAware,
-          )
-        : FoldGridDelegate(
-            fixedCrossAxisCount: widget.gridSize!,
-            childAspectRatio: widget.childAspectRatio!,
-            crossAxisSpacing: isTv ? 10 : 0,
-            mainAxisSpacing: isTv ? 10 : 0,
-            creaseBand: verticalBand,
-            forceEvenColumns: foldAware,
-          );
     return Container(
       color: context.shiori.color.ink0,
       child: LayoutBuilder(
         builder: (context, constraints) {
+          // Only a vertical band can bisect columns. The band arrives in
+          // shell/window coordinates, so shift it into the grid's own frame by
+          // the grid's true horizontal origin relative to the shell. The grid
+          // is the shell's right-most content (the nav rail sits to its left),
+          // so that origin is windowWidth - gridWidth; add the grid's own left
+          // padding. Shifting by padding.left alone left the protected gutter
+          // one rail width to the right of the actual hinge (HIGH-1).
+          final gridOriginX =
+              MediaQuery.sizeOf(context).width - constraints.maxWidth;
+          final verticalBand = (band != null && band.height > band.width)
+              ? band.shift(Offset(-(gridOriginX + padding.left), 0))
+              : null;
+          final delegate = widget.gridSize == null || widget.gridSize == 0
+              ? FoldGridDelegate(
+                  childAspectRatio: widget.childAspectRatio!,
+                  // Denser default on TV: from across a room 220px covers show
+                  // only ~4 huge tiles; 150 gives more, smaller covers.
+                  maxCrossAxisExtent: isTv ? 150 : 220,
+                  crossAxisSpacing: isTv ? 10 : 0,
+                  mainAxisSpacing: isTv ? 10 : 0,
+                  creaseBand: verticalBand,
+                  forceEvenColumns: foldAware,
+                )
+              : FoldGridDelegate(
+                  fixedCrossAxisCount: widget.gridSize!,
+                  childAspectRatio: widget.childAspectRatio!,
+                  crossAxisSpacing: isTv ? 10 : 0,
+                  mainAxisSpacing: isTv ? 10 : 0,
+                  creaseBand: verticalBand,
+                  forceEvenColumns: foldAware,
+                );
           _captureAnchor(
             delegate,
             constraints.maxWidth - padding.horizontal,

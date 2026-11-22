@@ -258,29 +258,6 @@ class FoldLayoutScope extends InheritedWidget {
       spec.usesTwoPaneDetail != oldWidget.spec.usesTwoPaneDetail;
 }
 
-/// Pins the player chrome to the far room below a horizontal crease. The video
-/// remains full-bleed; only the controls move, and they never straddle the band.
-class FoldPlayerControlsRegion extends StatelessWidget {
-  const FoldPlayerControlsRegion({super.key, required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final controlsRegion = FoldLayoutScope.maybeOf(context)
-        ?.spec
-        .controlsRegion;
-    if (controlsRegion == null) return child;
-    return Positioned(
-      left: 0,
-      right: 0,
-      top: controlsRegion.top,
-      bottom: 0,
-      child: child,
-    );
-  }
-}
-
 /// Positions two detail rooms without changing their element-tree parents.
 /// Cover keeps one column; inner portrait splits left/right; inner landscape
 /// and book posture stack the rooms around the horizontal crease.

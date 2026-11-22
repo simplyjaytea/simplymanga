@@ -13,6 +13,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:mangayomi/core/fold/fold_layout.dart';
 import 'package:mangayomi/core/fold/fold_modal.dart';
 import 'package:mangayomi/core/fold/fold_state_provider.dart';
 import 'package:mangayomi/eval/model/m_bridge.dart';
@@ -285,6 +286,30 @@ Future<void> _postLaunchInit(StorageProvider storage) async {
   }
 }
 
+/// Hoists the settled fold layout contract above the root Navigator so pushed
+/// full-screen routes (detail, player, reader) see the same [FoldLayoutScope]
+/// as the shell. This is the layout counterpart of the [FoldOverlayScope]
+/// hoist: overlays were already reachable on every route, but the layout spec
+/// was only installed inside the shell body, leaving top-level routes on the
+/// root navigator without it.
+class FoldRootScope extends ConsumerWidget {
+  const FoldRootScope({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // One canonical settled layout scope above the root Navigator, so pushed
+    // full-screen routes (detail, player) resolve the same crease geometry as
+    // the shell. The shell keeps its own FoldAwareShell for its body-sized
+    // resolution (B1); this root scope serves the routes outside the shell.
+    return FoldAwareShell(
+      driver: ref.watch(foldStateControllerProvider),
+      child: child,
+    );
+  }
+}
+
 class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
@@ -494,7 +519,7 @@ class _MyAppState extends ConsumerState<MyApp>
             ref.watch(appLockEnabledStateProvider) &&
             !ref.watch(appUnlockedStateProvider);
         return AppLayers(
-          app: withFoldOverlays,
+          app: FoldRootScope(child: withFoldOverlays),
           covers: [
             if (locked) const AppLockScreen(key: ValueKey(AppLockScreen)),
             // Above the lock screen, because a measurement is not worth
