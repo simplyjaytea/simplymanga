@@ -38,8 +38,12 @@ double hostHealthScore(HostHealth row) =>
     row.successEwma * 1000 - row.latencyEwmaMs * 0.05 - row.challenges * 2;
 
 /// Hosts best-first by stored health, for pre-ranking servers before a probe.
+/// Score ties break by host ascending — the same deterministic secondary key
+/// as the Rust health::rank, since Dart's List.sort is not stable (E-09).
 List<String> rankHostsByHealth(List<HostHealth> rows) {
-  final sorted = [...rows]
-    ..sort((a, b) => hostHealthScore(b).compareTo(hostHealthScore(a)));
+  final sorted = [...rows]..sort((a, b) {
+    final byScore = hostHealthScore(b).compareTo(hostHealthScore(a));
+    return byScore != 0 ? byScore : a.host.compareTo(b.host);
+  });
   return sorted.map((row) => row.host).toList(growable: false);
 }

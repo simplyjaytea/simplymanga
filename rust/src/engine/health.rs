@@ -62,12 +62,14 @@ impl HostHealth {
     }
 }
 
-/// Sort hosts best-first by score (in place).
+/// Sort hosts best-first by score (in place). Ties break by host ascending so
+/// the order is deterministic and matches the Dart ranking (E-09).
 pub fn rank(hosts: &mut [HostHealth]) {
     hosts.sort_by(|a, b| {
         b.score()
             .partial_cmp(&a.score())
             .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.host.cmp(&b.host))
     });
 }
 
@@ -157,5 +159,19 @@ mod tests {
         rank(&mut hosts);
         assert_eq!(hosts[0].host, "healthy");
         assert_eq!(hosts[1].host, "dead");
+    }
+
+    #[test]
+    fn rank_ties_break_by_host_deterministically() {
+        // E-09: equal scores must order identically on every run and match
+        // the Dart ranking's secondary key (host, ascending).
+        let mut hosts = vec![
+            HostHealth::new("zeta"),
+            HostHealth::new("alpha"),
+            HostHealth::new("mid"),
+        ];
+        rank(&mut hosts);
+        let order: Vec<&str> = hosts.iter().map(|h| h.host.as_str()).collect();
+        assert_eq!(order, vec!["alpha", "mid", "zeta"]);
     }
 }

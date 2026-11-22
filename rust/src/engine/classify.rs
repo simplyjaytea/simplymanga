@@ -132,24 +132,24 @@ pub fn classify(o: &ProbeOutcome) -> FailureClass {
     match o.status {
         Some(s) if (200..300).contains(&s) => FailureClass::Ok,
         Some(403) => FailureClass::Forbidden,
+        // E-08: rate limiting is transient — retry within budget.
+        Some(429) => FailureClass::ServerError,
         Some(s) if (500..600).contains(&s) => FailureClass::ServerError,
+        // E-08: a gone resource is a dead host, not an ambiguous Unknown.
+        Some(404) | Some(410) => FailureClass::DeadHost,
         _ => FailureClass::Unknown,
     }
 }
 
 /// Classify an mpv / media playback error string (not an HTTP outcome).
 pub fn classify_playback_error(error: &str) -> FailureClass {
-    if contains_any(
-        error,
-        &[
-            "audio decoder",
-            "video decoder",
-            "decoder init",
-            "failed to initialize",
-            "decode",
-            "codec",
-        ],
-    ) {
+    // E-08: audio-specific only. The old "decode"/"codec" needles also caught
+    // VIDEO decoder / device codec failures, which are not server problems —
+    // every server serves the same encode, so classifying them as
+    // DecoderError triggered a pointless full server sweep to exhaustion.
+    // Those now fall through to Unknown. Audio-init messages keep parity with
+    // the Dart audio matcher (isAudioDecoderInitializationError).
+    if contains_any(error, &["audio decoder", "decoding audio", "audio decode"]) {
         FailureClass::DecoderError
     } else if contains_any(error, &["timed out", "timeout"]) {
         FailureClass::Timeout
@@ -281,5 +281,63 @@ mod tests {
     #[test]
     fn unknown_playback_error_is_unknown() {
         assert_eq!(classify_playback_error("something odd"), FailureClass::Unknown);
+    }
+
+    #[test]
+    fn status_404_and_410_are_dead_host() {
+        // E-08: a gone resource is a dead host, not an ambiguous Unknown.
+        assert_eq!(classify(&outcome(404)), FailureClass::DeadHost);
+        assert_eq!(classify(&outcome(410)), FailureClass::DeadHost);
+    }
+
+    #[test]
+    fn status_429_is_retryable_server_error() {
+        // E-08: rate limiting is transient — retry within budget, don't treat
+        // the host as dead or unknown.
+        assert_eq!(classify(&outcome(429)), FailureClass::ServerError);
+    }
+
+    #[test]
+    fn playback_audio_decode_errors_stay_decoder_error() {
+        assert_eq!(
+            classify_playback_error("Failed to initialize audio decoder 'eac3'"),
+            FailureClass::DecoderError
+        );
+        assert_eq!(
+            classify_playback_error("error decoding audio"),
+            FailureClass::DecoderError
+        );
+        assert_eq!(
+            classify_playback_error("audio decode error"),
+            FailureClass::DecoderError
+        );
+    }
+
+    #[test]
+    fn playback_video_decoder_error_is_not_decoder_error() {
+        // E-08: a VIDEO decoder failure is a device/codec problem — every
+        // server serves the same encode, so it must not be classified as a
+        // server-side DecoderError that triggers a full sweep.
+        assert_eq!(
+            classify_playback_error("Failed to initialize video decoder 'hevc'"),
+            FailureClass::Unknown
+        );
+        assert_eq!(
+            classify_playback_error("vd: error decoding video frame"),
+            FailureClass::Unknown
+        );
+    }
+
+    #[test]
+    fn playback_generic_codec_error_is_not_decoder_error() {
+        // E-08: the old "decode"/"codec" needles were too broad.
+        assert_eq!(
+            classify_playback_error("codec 'hevc' not supported"),
+            FailureClass::Unknown
+        );
+        assert_eq!(
+            classify_playback_error("Failed to initialize decoder"),
+            FailureClass::Unknown
+        );
     }
 }
