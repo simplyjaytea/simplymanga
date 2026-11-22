@@ -51,8 +51,17 @@ pub struct FallbackMachine {
 
 impl FallbackMachine {
     pub fn new(ids: Vec<String>) -> Self {
+        // E-05: callers (the Dart mixin builds one entry per quality) can
+        // pass the same URL several times. Dedup, keeping first-seen order,
+        // so a duplicate never wastes a cycle or re-picks a failed server.
+        let mut servers: Vec<Server> = Vec::with_capacity(ids.len());
+        for id in ids {
+            if !servers.iter().any(|s| s.id == id) {
+                servers.push(Server::new(id));
+            }
+        }
         Self {
-            servers: ids.into_iter().map(Server::new).collect(),
+            servers,
             max_attempts: MAX_ATTEMPTS,
         }
     }
@@ -95,11 +104,11 @@ impl FallbackMachine {
             return NextAction::Retry(id.to_string());
         }
         // Otherwise advance to the next candidate in order.
-        if let Some(next) = self
-            .servers
-            .iter_mut()
-            .find(|s| matches!(s.state, ServerState::Ready | ServerState::Pending))
-        {
+        // E-05: never re-pick the id that just failed — even if a duplicate
+        // entry somehow survived construction dedup.
+        if let Some(next) = self.servers.iter_mut().find(|s| {
+            s.id != id && matches!(s.state, ServerState::Ready | ServerState::Pending)
+        }) {
             next.state = ServerState::Playing;
             return NextAction::Play(next.id.clone());
         }
@@ -188,5 +197,48 @@ mod tests {
         m.on_error("a", FailureClass::DeadHost); // -> Play b
         m.start("b");
         assert!(matches!(m.on_error("b", FailureClass::DeadHost), NextAction::Fail(_)));
+    }
+
+    #[test]
+    fn new_dedups_server_ids_preserving_first_order() {
+        // E-05: the mixin builds one entry per quality, so the same URL can
+        // appear several times. Duplicates must collapse to one candidate.
+        let m = FallbackMachine::new(vec![
+            "a".to_string(),
+            "a".to_string(),
+            "b".to_string(),
+            "a".to_string(),
+        ]);
+        let ids: Vec<&str> = m.servers.iter().map(|s| s.id.as_str()).collect();
+        assert_eq!(ids, vec!["a", "b"]);
+    }
+
+    #[test]
+    fn duplicate_urls_do_not_waste_a_cycle_on_the_failed_server() {
+        // E-05: with [A, A, B] the advance used to re-pick the duplicate A
+        // entry (Pending) and reopen the URL that just failed.
+        let mut m = FallbackMachine::new(vec![
+            "a".to_string(),
+            "a".to_string(),
+            "b".to_string(),
+        ]);
+        m.start("a");
+        assert_eq!(
+            m.on_error("a", FailureClass::DeadHost),
+            NextAction::Play("b".into())
+        );
+    }
+
+    #[test]
+    fn advance_skips_the_just_failed_id_even_with_injected_duplicates() {
+        // Defense in depth: even if a duplicate entry bypasses construction
+        // dedup, advance must never return the id that just failed.
+        let mut m = FallbackMachine::new(vec!["a".to_string(), "b".to_string()]);
+        m.servers.insert(1, Server::new("a"));
+        m.start("a");
+        assert_eq!(
+            m.on_error("a", FailureClass::DeadHost),
+            NextAction::Play("b".into())
+        );
     }
 }

@@ -158,10 +158,12 @@ impl AnimeEngine {
                 latency_ms: r.latency_ms,
             });
         }
+        // Same deterministic tie-break as health::rank (E-09).
         ranked.sort_by(|a, b| {
             b.score
                 .partial_cmp(&a.score)
                 .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.server.cmp(&b.server))
         });
         ranked
     }
@@ -176,6 +178,13 @@ impl AnimeEngine {
     /// drives the fallback state machine and updates health.
     pub fn report_class(&self, server: String, class: FailureClass) -> EngineAction {
         let mut inner = self.inner.lock();
+        // E-01: the wired playback path never calls start() — the host opens
+        // media directly and only reports failures. Count the attempt that
+        // just failed here so the MAX_ATTEMPTS budget is actually enforced
+        // (otherwise attempts stayed 0 and Timeout/ServerError retried the
+        // same URL forever). Pure-machine callers that DO call start() keep
+        // their semantics: start() marks the attempt, this marks its failure.
+        inner.machine.start(&server);
         let action = inner.machine.on_error(&server, class);
         if let Some(h) = inner.health.get_mut(&server) {
             h.record(class, 0.0);
@@ -213,5 +222,91 @@ impl AnimeEngine {
                 challenges: h.challenges,
             })
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn engine(servers: &[&str]) -> AnimeEngine {
+        AnimeEngine::new(servers.iter().map(|s| s.to_string()).collect())
+    }
+
+    #[test]
+    fn api_path_timeout_retry_budget_is_bounded_without_start() {
+        // E-01 regression: the wired path (report_error -> report_class ->
+        // on_error) never calls start(). Two timeouts on one server must
+        // advance to the next candidate, not Retry the same URL forever.
+        let e = engine(&["a", "b"]);
+        assert!(matches!(
+            e.report_class("a".into(), FailureClass::Timeout),
+            EngineAction::Retry { server } if server == "a"
+        ));
+        assert!(matches!(
+            e.report_class("a".into(), FailureClass::Timeout),
+            EngineAction::Play { server } if server == "b"
+        ));
+    }
+
+    #[test]
+    fn api_path_report_error_string_drives_the_same_budget() {
+        // The exact call the Dart mixin makes: reportError(server, error).
+        let e = engine(&["a", "b"]);
+        let first = e.report_error("a".into(), "tcp: Connection timed out".into());
+        assert!(matches!(first, EngineAction::Retry { ref server } if server == "a"));
+        let second = e.report_error("a".into(), "tcp: Connection timed out".into());
+        assert!(matches!(second, EngineAction::Play { ref server } if server == "b"));
+    }
+
+    #[test]
+    fn api_path_single_server_exhausts_after_max_attempts() {
+        let e = engine(&["a"]);
+        assert!(matches!(
+            e.report_class("a".into(), FailureClass::Timeout),
+            EngineAction::Retry { .. }
+        ));
+        assert!(matches!(
+            e.report_class("a".into(), FailureClass::Timeout),
+            EngineAction::Fail { .. }
+        ));
+    }
+
+    #[test]
+    fn api_path_server_error_budget_is_bounded() {
+        let e = engine(&["a", "b"]);
+        assert!(matches!(
+            e.report_class("a".into(), FailureClass::ServerError),
+            EngineAction::Retry { .. }
+        ));
+        assert!(matches!(
+            e.report_class("a".into(), FailureClass::ServerError),
+            EngineAction::Play { .. }
+        ));
+    }
+
+    #[test]
+    fn api_path_challenge_still_pauses_and_resumes() {
+        let e = engine(&["a", "b"]);
+        assert!(matches!(
+            e.report_class("a".into(), FailureClass::Challenge),
+            EngineAction::AwaitChallenge { ref server } if server == "a"
+        ));
+        assert!(matches!(
+            e.challenge_resolved("a".into()),
+            EngineAction::Play { ref server } if server == "a"
+        ));
+    }
+
+    #[test]
+    fn api_path_exhausted_server_is_not_resurrected() {
+        let e = engine(&["a", "b"]);
+        e.report_class("a".into(), FailureClass::Timeout);
+        e.report_class("a".into(), FailureClass::Timeout); // -> Play b
+        // b fails hard; a is exhausted and must not be picked again.
+        assert!(matches!(
+            e.report_class("b".into(), FailureClass::DeadHost),
+            EngineAction::Fail { .. }
+        ));
     }
 }

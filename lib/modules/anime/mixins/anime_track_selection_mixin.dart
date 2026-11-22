@@ -46,9 +46,84 @@ mixin AnimeTrackSelectionMixin<T extends riv.ConsumerStatefulWidget>
   final Set<String> _triedServerUrls = {};
   bool _serverFallbackInProgress = false;
   String? _pendingChallengeServer;
+  // E-11: latest error arriving while a server switch is in flight. Kept and
+  // reprocessed after the pass completes (mirrors _audioFallbackErrorQueued).
+  String? _serverFallbackErrorQueued;
+
+  // E-02: start watchdog. mpv's network-timeout is 5s, so a stalled stream
+  // would otherwise take >=5s to surface an error and miss the <2s switch
+  // contract. If an open has not reached playing within this window, report
+  // a Timeout to the engine so the bounded retry/fallback machinery advances.
+  static const Duration serverStartWatchdogTimeout = Duration(seconds: 2);
+  Timer? _startWatchdog;
+  StreamSubscription<bool>? _playingWatchSub;
+  StreamSubscription<Playlist>? _playlistWatchSub;
 
   /// A server awaiting an anti-bot challenge the user must clear (never skipped).
   String? get pendingChallengeServer => _pendingChallengeServer;
+
+  /// Test seam: whether a server-fallback pass is currently in flight.
+  @visibleForTesting
+  bool get serverFallbackInProgressForTest => _serverFallbackInProgress;
+
+  @override
+  void initState() {
+    super.initState();
+    _playingWatchSub = trackPlayer.stream.playing.listen(_onPlayingForWatchdog);
+    _playlistWatchSub = trackPlayer.stream.playlist.listen(
+      _onPlaylistForWatchdog,
+    );
+  }
+
+  @override
+  void dispose() {
+    _cancelStartWatchdog();
+    unawaited(_playingWatchSub?.cancel());
+    unawaited(_playlistWatchSub?.cancel());
+    _playingWatchSub = null;
+    _playlistWatchSub = null;
+    super.dispose();
+  }
+
+  void _onPlayingForWatchdog(bool playing) {
+    if (!playing) return;
+    _cancelStartWatchdog();
+    // E-05: confirmed playback is recovery — give any later failure a fresh
+    // budget, unless a fallback switch is mid-flight (its engine must keep
+    // counting the attempts it is making).
+    if (!_serverFallbackInProgress) _resetServerFallbackState();
+  }
+
+  void _onPlaylistForWatchdog(Playlist playlist) => _armStartWatchdog();
+
+  void _armStartWatchdog() {
+    _cancelStartWatchdog();
+    if (!mounted || isLocalForTracks) return;
+    if (trackPlayer.state.playing) return;
+    _startWatchdog = Timer(serverStartWatchdogTimeout, _onStartWatchdogTimeout);
+  }
+
+  void _cancelStartWatchdog() {
+    _startWatchdog?.cancel();
+    _startWatchdog = null;
+  }
+
+  void _onStartWatchdogTimeout() {
+    _startWatchdog = null;
+    if (!mounted || trackPlayer.state.playing) return;
+    reportPlaybackError(
+      'playback start timed out: no playing state within '
+      '${serverStartWatchdogTimeout.inSeconds}s',
+    );
+  }
+
+  /// E-05: drop the exhausted/stale machine so the next failure or a manual
+  /// reselect starts a fresh sweep instead of failing forever.
+  void _resetServerFallbackState() {
+    _animeEngine = null;
+    _triedServerUrls.clear();
+    _pendingChallengeServer = null;
+  }
 
   void initializeDefaultSubtitleAndAudioTracks() {
     if (!initSubtitleAndAudio) return;
@@ -453,12 +528,17 @@ mixin AnimeTrackSelectionMixin<T extends riv.ConsumerStatefulWidget>
     unawaited(_recoverFromServerError(message));
   }
 
+  /// Test seam: build the native engine. Headless tests override this because
+  /// the FRB bridge is unavailable there.
+  Future<AnimeEngine> createAnimeEngine(List<String> servers) =>
+      AnimeEngine.newInstance(servers: servers);
+
   Future<AnimeEngine?> _ensureAnimeEngine(List<VideoPrefs> options) async {
     if (_animeEngine != null) return _animeEngine;
     try {
       final servers = options.map(serverUrlOf).whereType<String>().toList();
       if (servers.isEmpty) return null;
-      _animeEngine = await AnimeEngine.newInstance(servers: servers);
+      _animeEngine = await createAnimeEngine(servers);
       return _animeEngine;
     } catch (_) {
       // Native bridge unavailable (e.g. headless test): fall back to pure Dart.
@@ -467,7 +547,13 @@ mixin AnimeTrackSelectionMixin<T extends riv.ConsumerStatefulWidget>
   }
 
   Future<void> _recoverFromServerError(String message) async {
-    if (_serverFallbackInProgress) return;
+    if (_serverFallbackInProgress) {
+      // E-11: keep the latest concurrent error and reprocess it after the
+      // in-flight pass, instead of silently dropping it (the audio path
+      // already does this via _audioFallbackErrorQueued).
+      _serverFallbackErrorQueued = message;
+      return;
+    }
     _serverFallbackInProgress = true;
     try {
       final options = buildVideoQualityOptions(
@@ -495,6 +581,9 @@ mixin AnimeTrackSelectionMixin<T extends riv.ConsumerStatefulWidget>
       }
 
       final plan = planFromEngineAction(action, options);
+      // The current open is dead or being replaced; its watchdog must not
+      // fire into the next server's startup (E-02).
+      _cancelStartWatchdog();
       switch (plan) {
         case SwitchServer(:final prefs):
           AppLogger.log(
@@ -503,6 +592,7 @@ mixin AnimeTrackSelectionMixin<T extends riv.ConsumerStatefulWidget>
             logLevel: LogLevel.warning,
           );
           await openMediaFromTrackSelection(prefs);
+          _armStartWatchdog();
         case AwaitChallenge(:final server):
           _pendingChallengeServer = server;
           AppLogger.log(
@@ -514,6 +604,9 @@ mixin AnimeTrackSelectionMixin<T extends riv.ConsumerStatefulWidget>
             'Playback fallback exhausted: $reason ($message)',
             logLevel: LogLevel.error,
           );
+          // E-05: an exhausted machine must not poison later attempts —
+          // reset so a reselect or a new error starts a fresh sweep.
+          _resetServerFallbackState();
         case NoFallback():
           break;
       }
@@ -524,6 +617,10 @@ mixin AnimeTrackSelectionMixin<T extends riv.ConsumerStatefulWidget>
       );
     } finally {
       _serverFallbackInProgress = false;
+      // E-11: reprocess the latest error that arrived mid-switch.
+      final queued = _serverFallbackErrorQueued;
+      _serverFallbackErrorQueued = null;
+      if (queued != null) unawaited(_recoverFromServerError(queued));
     }
   }
 
@@ -595,6 +692,8 @@ mixin AnimeTrackSelectionMixin<T extends riv.ConsumerStatefulWidget>
               quality.videoTrack?.id) {
             return;
           }
+          // E-05: a deliberate reselect starts a fresh reliability sweep.
+          _resetServerFallbackState();
           selectedVideoPrefs.value = quality;
           trackPlayer.stop();
           if (quality.isLocal) {
@@ -678,6 +777,8 @@ mixin AnimeTrackSelectionMixin<T extends riv.ConsumerStatefulWidget>
             if (selectedVideoPrefs.value?.videoTrack?.title == video.quality) {
               return;
             }
+            // E-05: a deliberate reselect starts a fresh reliability sweep.
+            _resetServerFallbackState();
             final prefs = VideoPrefs(
               videoTrack: VideoTrack(video.url, video.quality, video.quality),
               headers: video.headers,

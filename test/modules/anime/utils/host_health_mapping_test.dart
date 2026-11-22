@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mangayomi/models/host_health.dart';
 import 'package:mangayomi/utils/host_health_mapping.dart';
 import 'package:mangayomi/src/rust/api/anime_engine.dart';
 
@@ -96,6 +97,30 @@ void main() {
 
     test('an empty store ranks to an empty list', () {
       expect(rankHostsByHealth(const []), isEmpty);
+    });
+
+    test('score ties break by host ascending, deterministically (E-09)', () {
+      // Rust health::rank is stable with a host tie-break; Dart List.sort is
+      // not stable, so equal-score hosts need the same secondary key.
+      final rows = [
+        HostHealth()..host = 'zeta.example',
+        HostHealth()..host = 'alpha.example',
+        HostHealth()..host = 'mid.example',
+      ];
+      expect(rankHostsByHealth(rows), [
+        'alpha.example',
+        'mid.example',
+        'zeta.example',
+      ]);
+    });
+  });
+
+  group('HostHealth defaults (E-09)', () {
+    test('default success prior matches the Rust neutral prior 0.5', () {
+      // Rust HostHealth::new starts at success_ewma = 0.5 (health.rs). A
+      // Dart default of 0 would rank unseen hosts below the engine's
+      // neutral prior once hydration is wired.
+      expect(HostHealth().successEwma, 0.5);
     });
   });
 }

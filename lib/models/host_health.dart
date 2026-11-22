@@ -17,8 +17,10 @@ class HostHealth {
   /// The server identifier (URL) the engine ranks. Unique through [id].
   late String host;
 
-  /// Exponentially weighted success rate, 0..1.
-  double successEwma = 0;
+  /// Exponentially weighted success rate, 0..1. Defaults to the Rust
+  /// engine's neutral prior (health.rs HostHealth::new = 0.5) so an unseen
+  /// host ranks identically on both sides once hydration is wired (E-09).
+  double successEwma = 0.5;
 
   /// Exponentially weighted latency in milliseconds.
   double latencyEwmaMs = 0;
