@@ -24,6 +24,9 @@ mixin ReaderDoublePageMixin<T extends ConsumerStatefulWidget>
   int? get currentDoublePageViewIndex;
   int get currentDoublePageDisplayIndex;
 
+  /// Applies a re-synced page-view index after a wide single page loads.
+  void applyWideSinglePageTarget(int targetIndex);
+
   /// Live inputs for [ReaderPageIndexMath], read via the current provider
   /// state. Not safe to call during dispose — use [indexMathSync] there.
   ReaderPageIndexMath get indexMath => ReaderPageIndexMath(
@@ -165,6 +168,20 @@ mixin ReaderDoublePageMixin<T extends ConsumerStatefulWidget>
     );
     if (foundIdx != -1) return foundIdx;
     return 0;
+  }
+
+  /// A wide page finished loading in single-page mode: the spread split may
+  /// have moved the current page's page-view index. Re-sync it after a beat.
+  void syncIndexAfterWideSinglePageLoad(int index) {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      final currentActual = getCurrentPagesActualIndex();
+      applyWideSinglePageTarget(
+        isDoublePageActive
+            ? actualToPageViewIndex(currentActual)
+            : currentActual,
+      );
+    });
   }
 
   /// Total page count as seen by the page view controller.

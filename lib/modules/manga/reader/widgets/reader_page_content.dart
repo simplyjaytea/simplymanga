@@ -1,6 +1,8 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:shiori/shiori.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mangayomi/core/fold/crease_rooms.dart';
+import 'package:mangayomi/core/fold/fold_layout.dart';
 import 'package:mangayomi/models/chapter.dart';
 import 'package:mangayomi/models/settings.dart';
 import 'package:mangayomi/modules/manga/reader/image_view_paged.dart';
@@ -174,99 +176,144 @@ class ReaderPageContent extends ConsumerWidget {
           child: animChild,
         );
       },
-      child: (pageMode == PageMode.doublePage && !isHorizontalContinuous)
-          ? PageView.builder(
-              // Builds the spread on either side too, so it decodes while this
-              // one is read, as single pages do below.
-              allowImplicitScrolling: true,
-              controller: extendedController,
-              scrollDirection: scrollDirection,
-              reverse: isReverseHorizontal,
-              physics: isCurrentPageZoomed
-                  ? const NeverScrollableScrollPhysics()
-                  : const ClampingScrollPhysics(),
-              itemBuilder: (context, index) {
-                final singleFirst = ref.watch(
-                  doublePageSingleFirstPageStateProvider,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final viewport = constraints.biggest;
+          final rooms = FoldReaderRooms(
+            spec:
+                FoldLayoutScope.maybeOf(context)?.spec ??
+                FoldLayoutSpec.resolve(
+                  foldState: FoldState.unknown,
+                  size: viewport,
+                ),
+            viewport: viewport,
+          );
+          // AC-6: imagery stays out of the crease band. A vertical-band
+          // spread keeps the full viewport and flanks the band via the
+          // DoublePageView gutter; every other case moves into one room.
+          // CreaseRoomBox is always present (full-viewport room when there
+          // is no band) so the PageView element tree survives fold changes.
+          final isSpread =
+              pageMode == PageMode.doublePage && !isHorizontalContinuous;
+          final room = isSpread && rooms.verticalBand
+              ? rooms.fullViewport
+              : rooms.singlePageRoom(
+                  rtl:
+                      isReverseHorizontal &&
+                      scrollDirection == Axis.horizontal,
                 );
-                final spreads = ReaderPageIndexMath.buildSpreads(
-                  pages,
-                  singleFirst: singleFirst,
-                );
-                final spread = index < spreads.length ? spreads[index] : null;
-                final index1 = spread?.firstIndex ?? index * 2;
-                final index2 = spread?.secondIndex;
-                final List<UChapDataPreload?> pageList = [
-                  if (index1 < pages.length) pages[index1],
-                  if (index2 != null && index2 < pages.length) pages[index2],
-                ];
-                return DoublePageView.paged(
-                  key: ValueKey('spread_${index}_${index1}_$index2'),
-                  pages: isReverseHorizontal
-                      ? pageList.reversed.toList()
-                      : pageList,
-                  backgroundColor: backgroundColor,
+          return CreaseRoomBox(
+            viewport: viewport,
+            room: room,
+            child: (pageMode == PageMode.doublePage && !isHorizontalContinuous)
+              ? PageView.builder(
+                  // Builds the spread on either side too, so it decodes while this
+                  // one is read, as single pages do below.
+                  allowImplicitScrolling: true,
+                  controller: extendedController,
                   scrollDirection: scrollDirection,
-                  onZoomChanged: (zoomed) {
-                    onDoublePageZoomChanged(index, zoomed);
-                  },
-                  onControllerChanged: (controller, attached) {
-                    onDoublePageControllerChanged(index, controller, attached);
-                  },
-                  onFailedToLoadImage: (val) {
-                    onFailedToLoadImage(index, val);
-                  },
-                  onImageLoaded: (pIdx, width, height) {
-                    if (ref.read(splitWidePagesStateProvider) &&
-                        width > height * 1.2) {
-                      onWidePage(pIdx, width, height);
+                  reverse: isReverseHorizontal,
+                  physics: isCurrentPageZoomed
+                      ? const NeverScrollableScrollPhysics()
+                      : const ClampingScrollPhysics(),
+                  itemBuilder: (context, index) {
+                    final singleFirst = ref.watch(
+                      doublePageSingleFirstPageStateProvider,
+                    );
+                    final spreads = ReaderPageIndexMath.buildSpreads(
+                      pages,
+                      singleFirst: singleFirst,
+                    );
+                    final spread = index < spreads.length ? spreads[index] : null;
+                    final index1 = spread?.firstIndex ?? index * 2;
+                    final index2 = spread?.secondIndex;
+                    final List<UChapDataPreload?> pageList = [
+                      if (index1 < pages.length) pages[index1],
+                      if (index2 != null && index2 < pages.length) pages[index2],
+                    ];
+                    final spreadWidget = DoublePageView.paged(
+                      key: ValueKey('spread_${index}_${index1}_$index2'),
+                      pages: isReverseHorizontal
+                          ? pageList.reversed.toList()
+                          : pageList,
+                      backgroundColor: backgroundColor,
+                      scrollDirection: scrollDirection,
+                  centerGutter: rooms.spreadGutter,
+                      onZoomChanged: (zoomed) {
+                        onDoublePageZoomChanged(index, zoomed);
+                      },
+                      onControllerChanged: (controller, attached) {
+                        onDoublePageControllerChanged(index, controller, attached);
+                      },
+                      onFailedToLoadImage: (val) {
+                        onFailedToLoadImage(index, val);
+                      },
+                      onImageLoaded: (pIdx, width, height) {
+                        if (ref.read(splitWidePagesStateProvider) &&
+                            width > height * 1.2) {
+                          onWidePage(pIdx, width, height);
+                        }
+                      },
+                      onWideSinglePageLoaded: onWideSinglePageLoaded,
+                      onLongPressData: (datas) {
+                        ImageActionsDialog.show(
+                          context: context,
+                          data: datas,
+                          manga: chapter.manga.value!,
+                          chapterName: chapter.name!,
+                        );
+                      },
+                    );
+                    if (pageList.length == 1 && rooms.verticalBand) {
+                      // A lone page in a spread (wide page, odd tail) must
+                      // not straddle the band: give it a whole room.
+                      return CreaseRoomBox(
+                        viewport: viewport,
+                        room: rooms.singlePageRoom(
+                          rtl: isReverseHorizontal,
+                        ),
+                        child: spreadWidget,
+                      );
                     }
+                    return spreadWidget;
                   },
-                  onWideSinglePageLoaded: onWideSinglePageLoaded,
-                  onLongPressData: (datas) {
-                    ImageActionsDialog.show(
-                      context: context,
-                      data: datas,
-                      manga: chapter.manga.value!,
-                      chapterName: chapter.name!,
+                  itemCount: pageViewPageCount,
+                  onPageChanged: onPageChanged,
+                )
+              : PageView.builder(
+                  // Builds the page on either side too. A page decodes once it is
+                  // built, and the prefetch only brings its file to disk: built
+                  // only as it slid into view, every page showed its loading
+                  // ring, prefetched or not.
+                  allowImplicitScrolling: true,
+                  controller: extendedController,
+                  scrollDirection: scrollDirection,
+                  reverse: isReverseHorizontal,
+                  physics: isCurrentPageZoomed
+                      ? const NeverScrollableScrollPhysics()
+                      : const ClampingScrollPhysics(),
+                  itemBuilder: (BuildContext context, int index) {
+                    final page = pages[index];
+                    return ReaderPagedItem(
+                      key: ValueKey('paged-${page.widgetKey(index)}'),
+                      index: index,
+                      page: page,
+                      chapter: chapter,
+                      pageController: extendedController,
+                      controller: pageControllerFor(index),
+                      isVisible: index == currentPageViewIndex,
+                      backgroundColor: backgroundColor,
+                      onFailedToLoadImage: onFailedToLoadImage,
+                      onWidePage: onWidePage,
+                      onWideSinglePageLoaded: onWideSinglePageLoaded,
                     );
                   },
-                );
-              },
-              itemCount: pageViewPageCount,
-              onPageChanged: onPageChanged,
-            )
-          : PageView.builder(
-              // Builds the page on either side too. A page decodes once it is
-              // built, and the prefetch only brings its file to disk: built
-              // only as it slid into view, every page showed its loading
-              // ring, prefetched or not.
-              allowImplicitScrolling: true,
-              controller: extendedController,
-              scrollDirection: scrollDirection,
-              reverse: isReverseHorizontal,
-              physics: isCurrentPageZoomed
-                  ? const NeverScrollableScrollPhysics()
-                  : const ClampingScrollPhysics(),
-              itemBuilder: (BuildContext context, int index) {
-                final page = pages[index];
-                return ReaderPagedItem(
-                  key: ValueKey('paged-${page.widgetKey(index)}'),
-                  index: index,
-                  page: page,
-                  chapter: chapter,
-                  pageController: extendedController,
-                  controller: pageControllerFor(index),
-                  isVisible: index == currentPageViewIndex,
-                  backgroundColor: backgroundColor,
-                  onFailedToLoadImage: onFailedToLoadImage,
-                  onWidePage: onWidePage,
-                  onWideSinglePageLoaded: onWideSinglePageLoaded,
-                );
-              },
-              itemCount: pages.length,
-              onPageChanged: onPageChanged,
-            ),
+                  itemCount: pages.length,
+                  onPageChanged: onPageChanged,
+                ),
+          );
+        },
+      ),
     );
   }
 }

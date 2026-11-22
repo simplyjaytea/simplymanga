@@ -59,6 +59,10 @@ class DoublePageView extends StatefulWidget {
   /// Callback when a wide single page is loaded.
   final void Function(int index)? onWideSinglePageLoaded;
 
+  /// Crease-band gutter inserted between the two spread pages (fold devices,
+  /// vertical band). Zero on non-fold postures keeps the legacy flush layout.
+  final double centerGutter;
+
   const DoublePageView({
     super.key,
     required this.pages,
@@ -72,6 +76,7 @@ class DoublePageView extends StatefulWidget {
     this.onControllerChanged,
     this.onImageLoaded,
     this.onWideSinglePageLoaded,
+    this.centerGutter = 0,
   });
 
   /// Creates a paged mode double page view.
@@ -86,6 +91,7 @@ class DoublePageView extends StatefulWidget {
     this.onControllerChanged,
     this.onImageLoaded,
     this.onWideSinglePageLoaded,
+    this.centerGutter = 0,
   }) : isPagedMode = true,
        addTopPadding = false;
 
@@ -97,6 +103,7 @@ class DoublePageView extends StatefulWidget {
     this.onLongPressData,
     this.onFailedToLoadImage,
     this.addTopPadding = true,
+    this.centerGutter = 0,
   }) : isPagedMode = false,
        scrollDirection = Axis.vertical,
        onZoomChanged = null,
@@ -272,18 +279,28 @@ class _DoublePageViewState extends State<DoublePageView>
   }
 
   Widget _buildPageRow() {
+    final children = <Widget>[];
+    for (final page in widget.pages) {
+      if (page == null) continue;
+      if (children.isNotEmpty && widget.centerGutter > 0) {
+        children.add(SizedBox(width: widget.centerGutter));
+      }
+      final pageKey = ValueKey(
+        'dp_page_${page.widgetKey(-1)}_${page.pageUrl?.url}',
+      );
+      final pageImage = _buildPageImage(page);
+      // With a crease gutter the pages split the remaining width exactly
+      // in half, so the gutter lands on the band even when the two pages
+      // have different aspect ratios.
+      children.add(
+        widget.centerGutter > 0
+            ? Expanded(key: pageKey, child: pageImage)
+            : Flexible(key: pageKey, child: pageImage),
+      );
+    }
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (final page in widget.pages)
-          if (page != null)
-            Flexible(
-              key: ValueKey(
-                'dp_page_${page.widgetKey(-1)}_${page.pageUrl?.url}',
-              ),
-              child: _buildPageImage(page),
-            ),
-      ],
+      children: children,
     );
   }
 
