@@ -52,6 +52,13 @@ jobs:
           restore-keys: pub-${{ runner.os }}-
       - run: flutter pub get
       - run: flutter analyze
+      # SSIV's FFI image decoder (hook/build.dart) compiles PNG/JPEG support
+      # only when these headers exist (-DHAVE_LIBPNG / -DHAVE_LIBJPEG). GitHub
+      # ubuntu runners lack them, so the headless decoder stubs out and
+      # reader_fold_continuity AC-6 zoom fails (isReady never true). Install
+      # them so CI decodes real fixture images exactly like the dev box.
+      - name: SSIV native decoder headers (PNG/JPEG)
+        run: sudo apt-get update && sudo apt-get install -y libpng-dev libjpeg-dev
       - run: flutter test
 
   build-ios:
