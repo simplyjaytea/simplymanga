@@ -70,6 +70,10 @@ import 'package:mangayomi/modules/more/settings/reader/novel_reader_screen.dart'
 import 'package:mangayomi/modules/more/settings/reader/reader_screen.dart';
 import 'package:mangayomi/modules/more/settings/settings_screen.dart';
 import 'package:mangayomi/modules/more/settings/security/security_screen.dart';
+import 'package:mangayomi/modules/audiobookshelf/audiobookshelf_connection_screen.dart';
+import 'package:mangayomi/modules/audiobookshelf/audiobookshelf_home_screen.dart';
+import 'package:mangayomi/modules/audiobookshelf/audiobookshelf_player_screen.dart';
+import 'package:mangayomi/services/audiobookshelf/audiobookshelf_models.dart';
 import 'package:mangayomi/core/navigation/app_navigator.dart';
 import 'package:mangayomi/router/missing_extra_page.dart';
 import 'package:mangayomi/services/crash_route_observer.dart';
@@ -288,6 +292,18 @@ class RouterNotifier extends ChangeNotifier {
       builder: (data) => CategoriesScreen(data: data),
     ),
     _genericRoute(name: "statistics", child: const StatisticsScreen()),
+    _genericRoute(
+      name: "audiobookshelf",
+      child: const AudiobookshelfHomeScreen(),
+    ),
+    _genericRoute(
+      name: "audiobookshelfSetup",
+      child: const AudiobookshelfConnectionScreen(closeOnSave: true),
+    ),
+    _genericRoute<AbsLibraryItem>(
+      name: "audiobookshelfPlayer",
+      builder: (item) => AudiobookshelfPlayerScreen(item: item),
+    ),
     _genericRoute(name: "general", child: const GeneralScreen()),
     _genericRoute(name: "readerMode", child: const ReaderScreen()),
     _genericRoute<int>(

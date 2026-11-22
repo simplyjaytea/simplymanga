@@ -91,6 +91,13 @@ class MoreScreenState extends ConsumerState<MoreScreen> {
                   icon: Symbols.query_stats_rounded,
                   title: l10n.statistics,
                 ),
+                // Audiobookshelf is its own server and its own library; the
+                // tile opens setup until a server is saved.
+                ListTileWidget(
+                  onTap: () => context.push('/audiobookshelf'),
+                  icon: Symbols.headphones_rounded,
+                  title: 'Audiobookshelf',
+                ),
                 ListTileWidget(
                   onTap: () => context.push('/calendarScreen'),
                   icon: Symbols.calendar_month_rounded,
