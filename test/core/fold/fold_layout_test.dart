@@ -83,9 +83,13 @@ void main() {
     );
   });
 
-  test(
+  testWidgets(
     'settled fold driver coalesces bursts and emits only the latest state',
-    () async {
+    (tester) async {
+      // Logical clock, not wall time: real 5ms/10ms delays starve under
+      // full-suite parallel load and let the first report settle early
+      // (observed flake). tester.pump advances the binding's fake clock,
+      // so the debounce window is exact regardless of machine load.
       final driver = FoldStateController(
         debounce: const Duration(milliseconds: 10),
       );
@@ -95,10 +99,10 @@ void main() {
       addTearDown(subscription.cancel);
 
       driver.report(FoldState.innerPortrait);
-      await Future<void>.delayed(const Duration(milliseconds: 5));
+      await tester.pump(const Duration(milliseconds: 5));
       driver.report(FoldState.cover);
       driver.report(FoldState.innerLandscape);
-      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await tester.pump(const Duration(milliseconds: 20));
 
       expect(states, [FoldState.innerLandscape]);
     },
