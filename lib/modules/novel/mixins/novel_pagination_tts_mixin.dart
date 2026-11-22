@@ -7,7 +7,10 @@ import 'package:mangayomi/models/chapter.dart';
 import 'package:mangayomi/models/settings.dart';
 import 'package:mangayomi/modules/novel/novel_reader_controller_provider.dart';
 import 'package:mangayomi/modules/novel/tts/novel_tts_service.dart';
+import 'package:mangayomi/core/fold/crease_rooms.dart';
+import 'package:mangayomi/core/fold/fold_layout.dart';
 import 'package:mangayomi/modules/novel/utils/novel_paginator.dart';
+import 'package:mangayomi/modules/novel/utils/settled_pagination.dart';
 import 'package:mangayomi/modules/novel/widgets/novel_html_content.dart';
 import 'package:mangayomi/src/rust/api/epub.dart';
 import 'package:shiori/shiori.dart';
@@ -38,15 +41,8 @@ mixin NovelPaginationAndTtsMixin<T extends ConsumerStatefulWidget>
   late final PageController spreadController = PageController();
   int currentSpreadIndex = 0;
   NovelPaginationResult? cachedPagination;
-  String? _cachedPaginationHtml;
-  double? _cachedPaginationWidth;
-  double? _cachedPaginationHeight;
-  int? _cachedPaginationFontSize;
-  double? _cachedPaginationLineHeight;
-  int? _cachedPaginationPadding;
-  String? _cachedPaginationFontFamily;
-  bool? _cachedPaginationRemoveExtraSpacing;
-  TextAlign? _cachedPaginationTextAlign;
+  final SettledPosturePagination<NovelPaginationResult> _foldPagination =
+      SettledPosturePagination<NovelPaginationResult>();
 
   // ── TTS State ─────────────────────────────────────────────────────────────
   bool get ttsSupported => !Platform.isLinux;
@@ -202,22 +198,76 @@ mixin NovelPaginationAndTtsMixin<T extends ConsumerStatefulWidget>
     return LayoutBuilder(
       builder: (context, constraints) {
         final isDouble = effectivePageMode == PageMode.doublePage;
-        final singlePageWidth = isDouble
-            ? (constraints.maxWidth - 1.0) / 2
-            : constraints.maxWidth;
-        final pageHeight = constraints.maxHeight;
+        final rooms = FoldReaderRooms(
+          spec:
+              FoldLayoutScope.maybeOf(context)?.spec ??
+              FoldLayoutSpec.resolve(
+                foldState: FoldState.unknown,
+                size: constraints.biggest,
+              ),
+          viewport: constraints.biggest,
+        );
+        // AC-7: pagination dimensions come from crease-cleared rooms so text
+        // never lands inside the physical band. Non-fold postures keep the
+        // legacy full-viewport geometry.
+        final double singlePageWidth;
+        final double pageHeight;
+        final double spreadGutter;
+        if (isDouble) {
+          if (rooms.hasBand && rooms.verticalBand) {
+            spreadGutter = rooms.spreadGutter;
+            singlePageWidth = (constraints.maxWidth - spreadGutter) / 2;
+            pageHeight = constraints.maxHeight;
+          } else if (rooms.hasBand) {
+            spreadGutter = 1;
+            singlePageWidth = (constraints.maxWidth - 1) / 2;
+            pageHeight = constraints.maxHeight - rooms.creaseBand!.bottom;
+          } else {
+            spreadGutter = 1;
+            singlePageWidth = (constraints.maxWidth - 1) / 2;
+            pageHeight = constraints.maxHeight;
+          }
+        } else {
+          final room = rooms.singlePageRoom(rtl: false);
+          spreadGutter = 0;
+          singlePageWidth = room.width;
+          pageHeight = room.height;
+        }
 
-        if (cachedPagination == null ||
-            _cachedPaginationWidth != singlePageWidth ||
-            _cachedPaginationHeight != pageHeight ||
-            _cachedPaginationFontSize != fontSize ||
-            _cachedPaginationLineHeight != lineHeight ||
-            _cachedPaginationPadding != padding ||
-            _cachedPaginationHtml != htmlData ||
-            _cachedPaginationFontFamily != fontFamily ||
-            _cachedPaginationRemoveExtraSpacing != removeExtraSpacing ||
-            _cachedPaginationTextAlign != textAlignEnum) {
-          cachedPagination = NovelPaginator.paginate(
+        final posture =
+            FoldLayoutScope.maybeOf(context)?.spec.foldState ??
+            FoldState.unknown;
+        // M6: live constraints change on every fold-animation frame, so they
+        // must not key pagination while a posture is known. Only the settled
+        // posture invalidates the cache; unknown posture (no fold channel)
+        // keeps the legacy orientation-sensitive key for tablet rotation.
+        final postureKey = (
+          state: posture,
+          isLandscape: posture == FoldState.unknown
+              ? constraints.maxWidth > constraints.maxHeight
+              : posture == FoldState.innerLandscape,
+        );
+        final options = (
+          html: currentHtmlContent ?? htmlData,
+          pageMode: effectivePageMode,
+          fontSize: fontSize,
+          lineHeight: lineHeight,
+          padding: padding,
+          fontFamily: fontFamily,
+          removeExtraSpacing: removeExtraSpacing,
+          textAlign: textAlignEnum,
+        );
+        final previousPagination = cachedPagination;
+        final previousVersion = _foldPagination.version;
+        final previousProgress = previousPagination == null
+            ? null
+            : (lastEffectivePageMode == PageMode.doublePage
+                  ? previousPagination.progressForSpread(currentSpreadIndex)
+                  : previousPagination.progressForPage(currentSpreadIndex));
+        cachedPagination = _foldPagination.resolve(
+          posture: postureKey,
+          options: options,
+          paginate: () => NovelPaginator.paginate(
             htmlContent: htmlData,
             pageWidth: singlePageWidth,
             pageHeight: pageHeight,
@@ -227,16 +277,19 @@ mixin NovelPaginationAndTtsMixin<T extends ConsumerStatefulWidget>
             fontFamily: fontFamily,
             removeExtraSpacing: removeExtraSpacing,
             textAlign: textAlignEnum,
-          );
-          _cachedPaginationWidth = singlePageWidth;
-          _cachedPaginationHeight = pageHeight;
-          _cachedPaginationFontSize = fontSize;
-          _cachedPaginationLineHeight = lineHeight;
-          _cachedPaginationPadding = padding;
-          _cachedPaginationHtml = htmlData;
-          _cachedPaginationFontFamily = fontFamily;
-          _cachedPaginationRemoveExtraSpacing = removeExtraSpacing;
-          _cachedPaginationTextAlign = textAlignEnum;
+          ),
+        );
+        if (_foldPagination.version != previousVersion &&
+            previousProgress != null) {
+          final target = isDouble
+              ? cachedPagination!.spreadForProgress(previousProgress)
+              : cachedPagination!.pageForProgress(previousProgress);
+          currentSpreadIndex = target;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && spreadController.hasClients) {
+              spreadController.jumpToPage(target);
+            }
+          });
         }
 
         if (!scrollRestoreScheduled) {
@@ -260,7 +313,7 @@ mixin NovelPaginationAndTtsMixin<T extends ConsumerStatefulWidget>
             ? pagination.spreadCount
             : pagination.pageCount;
 
-        return Container(
+        final Widget spreadView = Container(
           color: parsedBackgroundColor,
           child: PageView.builder(
             controller: spreadController,
@@ -304,11 +357,13 @@ mixin NovelPaginationAndTtsMixin<T extends ConsumerStatefulWidget>
                         ),
                       ),
                     ),
-                    VerticalDivider(
-                      width: 1,
-                      thickness: 0.5,
-                      color: context.shiori.color.hairline,
-                    ),
+                    spreadGutter > 1
+                        ? SizedBox(width: spreadGutter)
+                        : VerticalDivider(
+                            width: 1,
+                            thickness: 0.5,
+                            color: context.shiori.color.hairline,
+                          ),
                     Expanded(
                       child: rightHtml != null
                           ? ClipRect(
@@ -357,6 +412,32 @@ mixin NovelPaginationAndTtsMixin<T extends ConsumerStatefulWidget>
                 );
               }
             },
+          ),
+        );
+        // AC-7: keep text out of the crease band. Single pages move into one
+        // room; a horizontal-band spread moves into the bottom room. A
+        // vertical-band spread already clears the band via its gutter.
+        final band = rooms.creaseBand;
+        if (band == null) return spreadView;
+        final Rect room;
+        if (!isDouble) {
+          room = rooms.singlePageRoom(rtl: false);
+        } else if (!rooms.verticalBand) {
+          room = Rect.fromLTRB(
+            0,
+            band.bottom,
+            constraints.maxWidth,
+            constraints.maxHeight,
+          );
+        } else {
+          return spreadView;
+        }
+        return ColoredBox(
+          color: parsedBackgroundColor,
+          child: CreaseRoomBox(
+            viewport: constraints.biggest,
+            room: room,
+            child: spreadView,
           ),
         );
       },

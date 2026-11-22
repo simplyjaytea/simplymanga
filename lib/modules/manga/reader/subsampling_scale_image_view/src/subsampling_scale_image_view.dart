@@ -789,6 +789,9 @@ class _SubsamplingScaleImageViewState extends State<SubsamplingScaleImageView>
     }
   }
 
+  /// Viewport size at the last settled zoom state: resize debouncing rescales
+  /// from this baseline, not an intermediate (never-applied) layout pass.
+  ui.Size _settledViewSize = ui.Size.zero;
   void _setupInitialViewState() {
     final transformer = CoordinateTransformer(
       scale: 1.0,
@@ -820,6 +823,84 @@ class _SubsamplingScaleImageViewState extends State<SubsamplingScaleImageView>
     );
 
     _isInitialized = true;
+    _settledViewSize = _viewSize;
+    _refreshTiles(load: true);
+  }
+
+  /// Viewport resize (fold, window): rescale absolute scale by newMin/oldMin
+  /// so the zoom factor holds, map the old viewport centre through source
+  /// coordinates and re-clamp; resetting to fit would discard the zoom.
+  void _resizePreservingZoom(ui.Size oldViewSize) {
+    if (!_isInitialized ||
+        oldViewSize.width <= 0 ||
+        oldViewSize.height <= 0 ||
+        _scale <= 0) {
+      _setupInitialViewState();
+      return;
+    }
+    final transformer = CoordinateTransformer(
+      scale: 1.0,
+      vTranslate: ui.Offset.zero,
+      rotation: widget.rotation,
+      sWidth: _sWidth,
+      sHeight: _sHeight,
+    );
+    final effWidth = transformer.effectiveSWidth.toDouble();
+    final effHeight = transformer.effectiveSHeight.toDouble();
+
+    final double oldMin = calculateMinScaleForType(
+      effWidth: effWidth,
+      effHeight: effHeight,
+      viewSize: oldViewSize,
+      effectiveScaleType: _effectiveScaleType,
+      customMinScale: widget.minScale,
+    );
+    final double newMin = _calcMinScaleForType(effWidth, effHeight);
+    final double ratio = oldMin > 0 ? newMin / oldMin : 1.0;
+
+    // Source point under the centre of the old viewport.
+    final ui.Offset sCenter = CoordinateTransformer(
+      scale: _scale,
+      vTranslate: _vTranslate,
+      rotation: widget.rotation,
+      sWidth: _sWidth,
+      sHeight: _sHeight,
+    ).viewToSource(
+      ui.Offset(oldViewSize.width / 2, oldViewSize.height / 2),
+    );
+
+    final double newScale = _clampScale(_scale * ratio);
+    final ui.Offset target = CoordinateTransformer(
+      scale: newScale,
+      vTranslate: ui.Offset.zero,
+      rotation: widget.rotation,
+      sWidth: _sWidth,
+      sHeight: _sHeight,
+    ).sourceToView(sCenter);
+    final ui.Offset newTranslate = _clampTranslate(
+      ui.Offset(
+        _viewSize.width / 2 - target.dx,
+        _viewSize.height / 2 - target.dy,
+      ),
+      newScale,
+    );
+
+    setState(() {
+      _scale = newScale;
+      _vTranslate = newTranslate;
+    });
+    _settledViewSize = _viewSize;
+
+    _tilingEngine.initialiseTileMap(
+      sWidth: _sWidth,
+      sHeight: _sHeight,
+      maxTileWidth: 4096.0,
+      maxTileHeight: 4096.0,
+      baseSampleSize: 1,
+      viewWidth: _viewSize.width,
+      viewHeight: _viewSize.height,
+    );
+    _notifyStateChanged();
     _refreshTiles(load: true);
   }
 
@@ -1247,7 +1328,7 @@ class _SubsamplingScaleImageViewState extends State<SubsamplingScaleImageView>
             _resizeTimer = Timer(const Duration(milliseconds: 150), () {
               if (!mounted) return;
               if (_sWidth > 0 && _sHeight > 0) {
-                _setupInitialViewState();
+                _resizePreservingZoom(_settledViewSize);
               } else if (_resolvedFilePath != null) {
                 _initImage();
               }

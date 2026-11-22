@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:hooks/hooks.dart';
 import 'package:native_toolchain_c/native_toolchain_c.dart';
 import 'package:code_assets/code_assets.dart';
@@ -15,6 +17,13 @@ void main(List<String> args) async {
       sources: ['lib/ffi/image_decoder.cpp'],
       includes: ['lib/ffi/'],
       flags: [
+        if (input.config.code.targetOS == OS.linux) ...[
+          // Mirror linux/CMakeLists.txt: enable the dlopen-based PNG/JPEG
+          // decoders when the development headers are present, so headless
+          // `flutter test` builds decode real images instead of stubbing out.
+          if (File('/usr/include/png.h').existsSync()) '-DHAVE_LIBPNG',
+          if (File('/usr/include/jpeglib.h').existsSync()) '-DHAVE_LIBJPEG',
+        ],
         if (input.config.code.targetOS == OS.iOS ||
             input.config.code.targetOS == OS.macOS) ...[
           '-framework',

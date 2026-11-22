@@ -13,6 +13,8 @@ import 'package:shiori/shiori.dart';
 import 'package:mangayomi/services/volume_keys.dart';
 import 'package:mangayomi/modules/reader_common/utils/reader_orientation.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mangayomi/core/fold/fold_layout.dart';
+import 'package:mangayomi/core/fold/fold_state_provider.dart';
 import 'package:mangayomi/services/discord_rpc.dart';
 import 'package:mangayomi/models/chapter.dart';
 import 'package:mangayomi/models/settings.dart';
@@ -376,251 +378,254 @@ class _NovelWebViewState extends ConsumerState<NovelWebView>
           }
           return true;
         },
-        child: Material(
-          child: SafeArea(
-            top: !fullScreenReader,
-            bottom: false,
-            child: widget.result.when(
-              data: (data) {
-                return Stack(
-                  children: [
-                    Column(
-                      children: [
-                        Flexible(
-                          child: Builder(
-                            builder: (context) {
-                              epubBook = data.$2;
-                              currentHtmlContent = data.$1;
-                              chapterMinutes = readingMinutes(data.$1);
+        child: FoldAwareShell(
+          driver: ref.read(foldStateControllerProvider),
+          child: Material(
+            child: SafeArea(
+              top: !fullScreenReader,
+              bottom: false,
+              child: widget.result.when(
+                data: (data) {
+                  return Stack(
+                    children: [
+                      Column(
+                        children: [
+                          Flexible(
+                            child: Builder(
+                              builder: (context) {
+                                epubBook = data.$2;
+                                currentHtmlContent = data.$1;
+                                chapterMinutes = readingMinutes(data.$1);
 
-                              final padding = ref.watch(
-                                novelReaderPaddingStateProvider,
-                              );
-                              final lineHeight = ref.watch(
-                                novelReaderLineHeightStateProvider,
-                              );
-                              final textAlign = ref.watch(
-                                novelTextAlignStateProvider,
-                              );
-                              final removeExtraSpacing = ref.watch(
-                                novelRemoveExtraParagraphSpacingStateProvider,
-                              );
-                              final customBackgroundColor = ref.watch(
-                                novelReaderThemeStateProvider,
-                              );
-                              final customTextColor = ref.watch(
-                                novelReaderTextColorStateProvider,
-                              );
-                              // "Default" is the font the user picked in
-                              // Appearance.
-                              final fontFamily =
-                                  resolveNovelFontFamily(
-                                    ref.watch(novelFontFamilyStateProvider),
-                                  ) ??
-                                  ref.watch(
-                                    appFontFamilyProvider.select((t) => t.$2),
-                                  );
-
-                              if (!scrollRestoreScheduled &&
-                                  _readerMode.isContinuous) {
-                                scrollRestoreScheduled = true;
-                                Future.delayed(
-                                  const Duration(milliseconds: 100),
-                                  () {
-                                    if (!scrolled &&
-                                        mounted &&
-                                        scrollController.hasClients) {
-                                      scrollController
-                                          .animateTo(
-                                            scrollController
-                                                    .position
-                                                    .maxScrollExtent *
-                                                (double.tryParse(
-                                                      chapter.lastPageRead!,
-                                                    ) ??
-                                                    0),
-                                            duration: const Duration(
-                                              seconds: 1,
-                                            ),
-                                            curve: Curves.fastOutSlowIn,
-                                          )
-                                          .then((value) {
-                                            if (!mounted) return;
-                                            scrolled = true;
-                                            if (_autoScroll.value &&
-                                                _isContinuousMode()) {
-                                              startAutoScroll();
-                                            }
-                                          });
-                                    }
-                                  },
+                                final padding = ref.watch(
+                                  novelReaderPaddingStateProvider,
                                 );
-                              }
-                              return Consumer(
-                                builder: (context, ref, _) {
-                                  final fontSize = ref.watch(
-                                    novelFontSizeStateProvider,
-                                  );
-                                  return ValueListenableBuilder<
-                                    ({
-                                      int paragraph,
-                                      int wordStart,
-                                      int wordEnd,
-                                    })
-                                  >(
-                                    valueListenable: ttsProgress,
-                                    builder: (context, tts, _) {
-                                      String htmlData = data.$1;
-                                      if (showTts && tts.paragraph >= 0) {
-                                        final result = NovelTtsService.instance
-                                            .highlightHtml(
-                                              data.$1,
-                                              tts.paragraph,
-                                              wordStart: tts.wordStart,
-                                              wordEnd: tts.wordEnd,
-                                            );
-                                        htmlData = result.$1;
-                                        ttsTotalBlocks = result.$2;
-                                      }
+                                final lineHeight = ref.watch(
+                                  novelReaderLineHeightStateProvider,
+                                );
+                                final textAlign = ref.watch(
+                                  novelTextAlignStateProvider,
+                                );
+                                final removeExtraSpacing = ref.watch(
+                                  novelRemoveExtraParagraphSpacingStateProvider,
+                                );
+                                final customBackgroundColor = ref.watch(
+                                  novelReaderThemeStateProvider,
+                                );
+                                final customTextColor = ref.watch(
+                                  novelReaderTextColorStateProvider,
+                                );
+                                // "Default" is the font the user picked in
+                                // Appearance.
+                                final fontFamily =
+                                    resolveNovelFontFamily(
+                                      ref.watch(novelFontFamilyStateProvider),
+                                    ) ??
+                                    ref.watch(
+                                      appFontFamilyProvider.select((t) => t.$2),
+                                    );
 
-                                      final parsedTextColor = parseNovelColor(
-                                        customTextColor,
-                                        fallback: Colors.white,
-                                      );
-                                      final parsedBackgroundColor =
-                                          parseNovelColor(
-                                            customBackgroundColor,
-                                            // shiori: the book's own styles, set against whatever page colour the reader chose
-                                            fallback: const Color(0xFF292832),
-                                          );
-                                      final textAlignEnum = getNovelTextAlign(
-                                        textAlign,
-                                      );
-
-                                      if (!_readerMode.isContinuous) {
-                                        return buildPaginatedSpreadView(
-                                          effectivePageMode: effectivePageMode,
-                                          htmlData: htmlData,
-                                          fontSize: fontSize,
-                                          lineHeight: lineHeight,
-                                          padding: padding,
-                                          fontFamily: fontFamily,
-                                          removeExtraSpacing:
-                                              removeExtraSpacing,
-                                          textAlignEnum: textAlignEnum,
-                                          parsedTextColor: parsedTextColor,
-                                          parsedBackgroundColor:
-                                              parsedBackgroundColor,
-                                          tts: tts,
-                                        );
-                                      }
-
-                                      return Scrollbar(
-                                        controller: scrollController,
-                                        interactive: true,
-                                        child: GestureDetector(
-                                          behavior: HitTestBehavior.translucent,
-                                          onTap: () {
-                                            _isViewFunction();
-                                          },
-                                          child: CustomScrollView(
-                                            controller: scrollController,
-                                            physics:
-                                                const BouncingScrollPhysics(),
-                                            slivers: [
-                                              SliverToBoxAdapter(
-                                                child: NovelHtmlContent(
-                                                  htmlData: htmlData,
-                                                  fontFamily: fontFamily,
-                                                  fontSize: fontSize,
-                                                  lineHeight: lineHeight,
-                                                  padding: padding,
-                                                  textAlign: textAlignEnum,
-                                                  removeExtraSpacing:
-                                                      removeExtraSpacing,
-                                                  textColor: parsedTextColor,
-                                                  backgroundColor:
-                                                      parsedBackgroundColor,
-                                                  showTts: showTts,
-                                                  tts: tts,
-                                                  epubBook: epubBook,
-                                                ),
+                                if (!scrollRestoreScheduled &&
+                                    _readerMode.isContinuous) {
+                                  scrollRestoreScheduled = true;
+                                  Future.delayed(
+                                    const Duration(milliseconds: 100),
+                                    () {
+                                      if (!scrolled &&
+                                          mounted &&
+                                          scrollController.hasClients) {
+                                        scrollController
+                                            .animateTo(
+                                              scrollController
+                                                      .position
+                                                      .maxScrollExtent *
+                                                  (double.tryParse(
+                                                        chapter.lastPageRead!,
+                                                      ) ??
+                                                      0),
+                                              duration: const Duration(
+                                                seconds: 1,
                                               ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
+                                              curve: Curves.fastOutSlowIn,
+                                            )
+                                            .then((value) {
+                                              if (!mounted) return;
+                                              scrolled = true;
+                                              if (_autoScroll.value &&
+                                                  _isContinuousMode()) {
+                                                startAutoScroll();
+                                              }
+                                            });
+                                      }
                                     },
                                   );
-                                },
-                              );
+                                }
+                                return Consumer(
+                                  builder: (context, ref, _) {
+                                    final fontSize = ref.watch(
+                                      novelFontSizeStateProvider,
+                                    );
+                                    return ValueListenableBuilder<
+                                      ({
+                                        int paragraph,
+                                        int wordStart,
+                                        int wordEnd,
+                                      })
+                                    >(
+                                      valueListenable: ttsProgress,
+                                      builder: (context, tts, _) {
+                                        String htmlData = data.$1;
+                                        if (showTts && tts.paragraph >= 0) {
+                                          final result = NovelTtsService.instance
+                                              .highlightHtml(
+                                                data.$1,
+                                                tts.paragraph,
+                                                wordStart: tts.wordStart,
+                                                wordEnd: tts.wordEnd,
+                                              );
+                                          htmlData = result.$1;
+                                          ttsTotalBlocks = result.$2;
+                                        }
+
+                                        final parsedTextColor = parseNovelColor(
+                                          customTextColor,
+                                          fallback: Colors.white,
+                                        );
+                                        final parsedBackgroundColor =
+                                            parseNovelColor(
+                                              customBackgroundColor,
+                                              // shiori: the book's own styles, set against whatever page colour the reader chose
+                                              fallback: const Color(0xFF292832),
+                                            );
+                                        final textAlignEnum = getNovelTextAlign(
+                                          textAlign,
+                                        );
+
+                                        if (!_readerMode.isContinuous) {
+                                          return buildPaginatedSpreadView(
+                                            effectivePageMode: effectivePageMode,
+                                            htmlData: htmlData,
+                                            fontSize: fontSize,
+                                            lineHeight: lineHeight,
+                                            padding: padding,
+                                            fontFamily: fontFamily,
+                                            removeExtraSpacing:
+                                                removeExtraSpacing,
+                                            textAlignEnum: textAlignEnum,
+                                            parsedTextColor: parsedTextColor,
+                                            parsedBackgroundColor:
+                                                parsedBackgroundColor,
+                                            tts: tts,
+                                          );
+                                        }
+
+                                        return Scrollbar(
+                                          controller: scrollController,
+                                          interactive: true,
+                                          child: GestureDetector(
+                                            behavior: HitTestBehavior.translucent,
+                                            onTap: () {
+                                              _isViewFunction();
+                                            },
+                                            child: CustomScrollView(
+                                              controller: scrollController,
+                                              physics:
+                                                  const BouncingScrollPhysics(),
+                                              slivers: [
+                                                SliverToBoxAdapter(
+                                                  child: NovelHtmlContent(
+                                                    htmlData: htmlData,
+                                                    fontFamily: fontFamily,
+                                                    fontSize: fontSize,
+                                                    lineHeight: lineHeight,
+                                                    padding: padding,
+                                                    textAlign: textAlignEnum,
+                                                    removeExtraSpacing:
+                                                        removeExtraSpacing,
+                                                    textColor: parsedTextColor,
+                                                    backgroundColor:
+                                                        parsedBackgroundColor,
+                                                    showTts: showTts,
+                                                    tts: tts,
+                                                    epubBook: epubBook,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ),
+                          if (ref.watch(novelShowScrollPercentageStateProvider))
+                            NovelScrollProgressBanner(
+                              rebuildStream: rebuildDetail.stream,
+                              isContinuous: _readerMode.isContinuous,
+                              cachedPagination: () => cachedPagination,
+                              effectivePageMode: effectivePageMode,
+                              currentSpreadIndex: () => currentSpreadIndex,
+                              offset: () => offset,
+                              maxOffset: () => maxOffset,
+                            ),
+                        ],
+                      ),
+                      NovelTapZones(
+                        usePageTapZones: ref.watch(novelTapToScrollStateProvider),
+                        isContinuousMode: _readerMode.isContinuous,
+                        onPageStep: _onBtnTapped,
+                        onToggleUi: _isViewFunction,
+                      ),
+                      _appBar(),
+                      _bottomBar(backgroundColor, effectivePageMode),
+                      ReaderAutoScrollButton(
+                        isContinuousMode: _readerMode.isContinuous,
+                        isUiVisible: _isView,
+                        autoScrollPage: _autoScrollPage,
+                        autoScroll: _autoScroll,
+                        onToggle: () {
+                          _autoScroll.value = !_autoScroll.value;
+                        },
+                      ),
+                      if (ttsSupported && showTts && currentHtmlContent != null)
+                        Positioned(
+                          // Just above the panel while it is shown.
+                          bottom: _isView
+                              ? novelBottomBarHeightAbove(context)
+                              : 0,
+                          left: 0,
+                          right: 0,
+                          child: TtsPlayerBar(
+                            htmlContent: currentHtmlContent!,
+                            onClose: () {
+                              if (mounted) {
+                                setState(() => showTts = false);
+                              }
                             },
                           ),
                         ),
-                        if (ref.watch(novelShowScrollPercentageStateProvider))
-                          NovelScrollProgressBanner(
-                            rebuildStream: rebuildDetail.stream,
-                            isContinuous: _readerMode.isContinuous,
-                            cachedPagination: () => cachedPagination,
-                            effectivePageMode: effectivePageMode,
-                            currentSpreadIndex: () => currentSpreadIndex,
-                            offset: () => offset,
-                            maxOffset: () => maxOffset,
-                          ),
-                      ],
-                    ),
-                    NovelTapZones(
-                      usePageTapZones: ref.watch(novelTapToScrollStateProvider),
-                      isContinuousMode: _readerMode.isContinuous,
-                      onPageStep: _onBtnTapped,
-                      onToggleUi: _isViewFunction,
-                    ),
-                    _appBar(),
-                    _bottomBar(backgroundColor, effectivePageMode),
-                    ReaderAutoScrollButton(
-                      isContinuousMode: _readerMode.isContinuous,
-                      isUiVisible: _isView,
-                      autoScrollPage: _autoScrollPage,
-                      autoScroll: _autoScroll,
-                      onToggle: () {
-                        _autoScroll.value = !_autoScroll.value;
-                      },
-                    ),
-                    if (ttsSupported && showTts && currentHtmlContent != null)
-                      Positioned(
-                        // Just above the panel while it is shown.
-                        bottom: _isView
-                            ? novelBottomBarHeightAbove(context)
-                            : 0,
-                        left: 0,
-                        right: 0,
-                        child: TtsPlayerBar(
-                          htmlContent: currentHtmlContent!,
-                          onClose: () {
-                            if (mounted) {
-                              setState(() => showTts = false);
-                            }
-                          },
-                        ),
+                    ],
+                  );
+                },
+                loading: () => scaffoldWith(context, const ShioriLoading()),
+                error: (err, stack) {
+                  if (widget.result.isRefreshing || widget.result.isReloading) {
+                    return scaffoldWith(context, const ShioriLoading());
+                  }
+                  return scaffoldWith(
+                    context,
+                    ErrorState(
+                      detail: err.toString(),
+                      onRetry: () => ref.invalidate(
+                        getHtmlContentProvider(chapter: widget.chapter),
                       ),
-                  ],
-                );
-              },
-              loading: () => scaffoldWith(context, const ShioriLoading()),
-              error: (err, stack) {
-                if (widget.result.isRefreshing || widget.result.isReloading) {
-                  return scaffoldWith(context, const ShioriLoading());
-                }
-                return scaffoldWith(
-                  context,
-                  ErrorState(
-                    detail: err.toString(),
-                    onRetry: () => ref.invalidate(
-                      getHtmlContentProvider(chapter: widget.chapter),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ),

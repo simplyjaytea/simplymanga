@@ -20,6 +20,8 @@ import 'package:mangayomi/modules/reader_common/reader_chapter_navigation.dart';
 import 'package:shiori/shiori.dart';
 import 'package:mangayomi/modules/reader_common/providers/chapter_display.dart';
 import 'package:go_router/go_router.dart';
+import 'package:mangayomi/core/fold/fold_layout.dart';
+import 'package:mangayomi/core/fold/fold_state_provider.dart';
 import 'package:mangayomi/services/discord_rpc.dart';
 import 'package:mangayomi/models/chapter.dart';
 import 'package:mangayomi/models/settings.dart';
@@ -503,20 +505,8 @@ class _MangaChapterPageGalleryState
       downloadAhead(ref, chapter);
     });
 
-    final saved = _savedPageIndex;
-    if (saved > 0 && _cachedReaderMode.isContinuous) {
-      _initialContinuousJumpPending = true;
-      _initialContinuousTargetIndex = _currentIndex;
-    }
-
     _continuousScrollController.addListener(_scheduleReadProgressListener);
     _listController.addListener(_scheduleReadProgressListener);
-    initPageNavigation(
-      listController: _listController,
-      continuousScrollController: _continuousScrollController,
-      extendedController: _extendedController,
-    );
-    _initCurrentIndex();
     _discordReaderSession = discordRpc?.beginReaderSession();
     discordRpc?.showChapterDetails(ref, chapter);
     WidgetsBinding.instance.addObserver(this);
@@ -526,7 +516,35 @@ class _MangaChapterPageGalleryState
     }
     _initWakelock();
   }
-
+  bool _pageNavInitialized = false;
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // One-time nav init: needs MediaQuery orientation, so not in initState.
+    if (_pageNavInitialized) return;
+    _pageNavInitialized = true;
+    if (_savedPageIndex > 0 && _cachedReaderMode.isContinuous) {
+      _initialContinuousJumpPending = true;
+      _initialContinuousTargetIndex = _currentIndex;
+    }
+    initPageNavigation(
+      listController: _listController,
+      continuousScrollController: _continuousScrollController,
+      extendedController: _extendedController,
+    );
+    _initCurrentIndex();
+  }
+  @override
+  void applyWideSinglePageTarget(int targetIndex) {
+    if (_currentIndex == targetIndex) return;
+    setState(() {
+      _currentIndex = targetIndex;
+      _currentPageViewIndex.value = targetIndex;
+      if (_extendedController.hasClients) {
+        _extendedController.jumpToPage(targetIndex);
+      }
+    });
+  }
   void _initWakelock() {
     final keepOn = ref.read(keepScreenOnReaderStateProvider);
     if (keepOn) {
@@ -728,366 +746,347 @@ class _MangaChapterPageGalleryState
           }
           return true;
         },
-        child: Material(
-          child: SafeArea(
-            top: !fullScreenReader,
-            bottom: false,
-            child: Stack(
-              children: [
-                Listener(
-                  // A wheel turns the page in the paged modes, on desktop;
-                  // the continuous ones scroll with it already.
-                  onPointerSignal: isDesktop && !readerMode.isContinuous
-                      ? onPointerSignal
-                      : null,
-                  child: ReaderPageContent(
-                    pages: pages,
-                    chapter: widget.chapter,
-                    readerMode: readerMode,
-                    pageMode: currentEffectivePageMode,
-                    backgroundColor: backgroundColor,
-                    pagePreloadAmount: pagePreloadAmount,
-                    initialScrollIndex: _currentIndex!,
-                    currentPageViewIndex: _currentIndex!,
-                    pageViewPageCount: pageViewPageCount,
-                    isReverseHorizontal: _isReverseHorizontal,
-                    isCurrentPageZoomed: isCurrentPageZoomed,
-                    listController: _listController,
-                    continuousScrollController: _continuousScrollController,
-                    extendedController: _extendedController,
-                    scrollDirection: _scrollDirection,
-                    pageControllerFor: (index) => pageControllers.putIfAbsent(
-                      index,
-                      () =>
-                          ssiv.SubsamplingScaleImageViewController()
-                            ..addListener(() => updateZoomStateForIndex(index)),
+        child: FoldAwareShell(
+          driver: ref.read(foldStateControllerProvider),
+          child: Material(
+            child: SafeArea(
+              top: !fullScreenReader,
+              bottom: false,
+              child: Stack(
+                children: [
+                  Listener(
+                    // A wheel turns the page in the paged modes, on desktop;
+                    // the continuous ones scroll with it already.
+                    onPointerSignal: isDesktop && !readerMode.isContinuous
+                        ? onPointerSignal
+                        : null,
+                    child: ReaderPageContent(
+                      pages: pages,
+                      chapter: widget.chapter,
+                      readerMode: readerMode,
+                      pageMode: currentEffectivePageMode,
+                      backgroundColor: backgroundColor,
+                      pagePreloadAmount: pagePreloadAmount,
+                      initialScrollIndex: _currentIndex!,
+                      currentPageViewIndex: _currentIndex!,
+                      pageViewPageCount: pageViewPageCount,
+                      isReverseHorizontal: _isReverseHorizontal,
+                      isCurrentPageZoomed: isCurrentPageZoomed,
+                      listController: _listController,
+                      continuousScrollController: _continuousScrollController,
+                      extendedController: _extendedController,
+                      scrollDirection: _scrollDirection,
+                      pageControllerFor: (index) => pageControllers.putIfAbsent(
+                        index,
+                        () =>
+                            ssiv.SubsamplingScaleImageViewController()
+                              ..addListener(() => updateZoomStateForIndex(index)),
+                      ),
+                      onFailedToLoadImage: _onFailedToLoadImage,
+                      onWidePage: splitWidePage,
+                      onTallPage: splitTallPage,
+                      onPageImageLoaded: _onContinuousPageImageLoaded,
+                      onWideSinglePageLoaded: syncIndexAfterWideSinglePageLoad,
+                      onDoublePageZoomChanged: (index, zoomed) {
+                        if (index != _currentIndex || !mounted) return;
+                        if (isCurrentPageZoomed == zoomed) return;
+                        setState(() => isCurrentPageZoomed = zoomed);
+                      },
+                      onDoublePageControllerChanged:
+                          (index, controller, attached) {
+                            if (attached) {
+                              doublePageControllers[index] = controller;
+                            } else if (identical(
+                              doublePageControllers[index],
+                              controller,
+                            )) {
+                              // Rebuilt spread: new controller registers before
+                              // old is disposed; drop only the disposed entry.
+                              doublePageControllers.remove(index);
+                            }
+                          },
+                      onPageChanged: _onPageChanged,
                     ),
-                    onFailedToLoadImage: _onFailedToLoadImage,
-                    onWidePage: splitWidePage,
-                    onTallPage: splitTallPage,
-                    onPageImageLoaded: _onContinuousPageImageLoaded,
-                    onWideSinglePageLoaded: (index) {
-                      Future.delayed(const Duration(milliseconds: 300), () {
-                        if (!mounted) return;
-                        final currentActual = getCurrentPagesActualIndex();
-                        final targetIndex = isDoublePageActive
-                            ? actualToPageViewIndex(currentActual)
-                            : currentActual;
-                        setState(() {
-                          if (_currentIndex != targetIndex) {
-                            _currentIndex = targetIndex;
-                            _currentPageViewIndex.value = targetIndex;
-                            if (_extendedController.hasClients) {
-                              _extendedController.jumpToPage(targetIndex);
+                  ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _hasCurrentPageImageError,
+                    builder: (context, hasCurrentError, child) {
+                      return ReaderOverlays(
+                        isReverseHorizontal: _isReverseHorizontal,
+                        hasCurrentPageImageError: hasCurrentError,
+                        isContinuousMode: readerMode.isContinuous,
+                        onToggleUI: _isViewFunction,
+                        onPreviousPage: () {
+                          if (isCurrentPageZoomed &&
+                              doublePageControllers[_currentIndex] != null) {
+                            handlePreviousPageZoomed();
+                          } else {
+                            handlePageNavigation(forward: false);
+                          }
+                        },
+                        onNextPage: () {
+                          if (isCurrentPageZoomed &&
+                              doublePageControllers[_currentIndex] != null) {
+                            handleNextPageZoomed();
+                          } else {
+                            handlePageNavigation(forward: true);
+                          }
+                        },
+                        isFlashing: isFlashing,
+                        flashOverlayColor: flashOverlayColor,
+                        showNavigationOverlay: showNavigationOverlay,
+                        onCloseNavigationOverlay: () {
+                          setState(() {
+                            showNavigationOverlay = false;
+                          });
+                        },
+                      );
+                    },
+                  ),
+                  // On desktop, a pointer reaching the top or bottom edge
+                  // brings the bars back. Translucent: the page still takes
+                  // the clicks under them.
+                  if (isDesktop && !_isView) ...[
+                    for (final top in [true, false])
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: top ? 0 : null,
+                        bottom: top ? null : 0,
+                        height: 40,
+                        child: MouseRegion(
+                          hitTestBehavior: HitTestBehavior.translucent,
+                          onEnter: (_) {
+                            if (!_isView) _isViewFunction();
+                          },
+                        ),
+                      ),
+                  ],
+                  ReaderAppBar(
+                    chapter: chapter,
+                    mangaName: _readerController.getMangaName(),
+                    // Named as in the series' own list.
+                    chapterTitle: chapterDisplayName(
+                      chapter,
+                      _readerController.getManga(),
+                      context.l10n,
+                      byNumber: ref.watch(
+                        chapterNumberDisplayProvider.select(
+                          (ids) => ids.contains(_readerController.getManga().id),
+                        ),
+                      ),
+                    ),
+                    isVisible: _isView,
+                    isBookmarked: _isBookmarked,
+                    backgroundColor: _backgroundColor,
+                    // In the bottom panel, within reach.
+                    showChapterList: false,
+                    onBackPressed: () => Navigator.pop(context),
+                    onBookmarkPressed: () {
+                      _readerController.setChapterBookmarked();
+                      setState(() {
+                        _isBookmarked = !_isBookmarked;
+                      });
+                    },
+                    onWebViewPressed:
+                        (chapter.manga.value!.isLocalArchive ?? false) == false
+                        ? () {
+                            final data = buildWebViewData(chapter);
+                            if (data != null) {
+                              context.push("/mangawebview", extra: data);
                             }
                           }
-                        });
-                      });
+                        : null,
+                    onRefreshPressed:
+                        (chapter.manga.value!.isLocalArchive ?? false) == false
+                        ? () async {
+                            // Drop the cached page list first: rebuilding the
+                            // reader reads it, and a list left in place would be
+                            // reused as-is.
+                            await ChapterCache().remove(chapter);
+                            ref.invalidate(
+                              getChapterPagesProvider(chapter: chapter),
+                            );
+                            if (chapter.id != null) {
+                              ref.invalidate(mangaReaderProvider(chapter.id!));
+                            }
+                            if (context.mounted) {
+                              pushReplacementMangaReaderView(
+                                chapter: chapter,
+                                context: context,
+                              );
+                            }
+                          }
+                        : null,
+                  ),
+                  ReaderBottomBar(
+                    chapter: chapter,
+                    isVisible: _isView,
+                    hasPreviousChapter: _readerController.hasPreviousChapter,
+                    hasNextChapter: _readerController.hasNextChapter,
+                    onPreviousChapter: () => _goToChapter(false),
+                    onNextChapter: () => _goToChapter(true),
+                    onSliderChanged: (value, ref) {
+                      _sliderPreviewIndex.value = value;
+                      _currentPageDisplayIndex.value = value;
+                      ref
+                          .read(currentIndexProvider(chapter).notifier)
+                          .setCurrentIndex(value);
                     },
-                    onDoublePageZoomChanged: (index, zoomed) {
-                      if (index == _currentIndex) {
-                        if (mounted && isCurrentPageZoomed != zoomed) {
+                    onSliderChangeEnd: (value) {
+                      _sliderPreviewIndex.value = null;
+                      // Looked up rather than read from the page's pageIndex,
+                      // which goes stale once a wide page before it is split.
+                      int jumpIndex = actualIndexOfChapterPage(value);
+                      if (jumpIndex == -1) return;
+                      // In double page mode, convert array index to page view index
+                      if (isDoublePageActive) {
+                        jumpIndex = actualToPageViewIndex(jumpIndex);
+                      }
+                      _currentIndex = jumpIndex;
+                      _currentPageViewIndex.value = jumpIndex;
+                      navigationService.jumpToPage(
+                        index: jumpIndex,
+                        readerMode: ref.read(_currentReaderMode)!,
+                      );
+                    },
+                    onReaderModeChanged: (mode, ref) {
+                      ref.read(_currentReaderMode.notifier).state = mode;
+                      _setReaderMode(mode, ref, fromUser: true);
+                    },
+                    onPageModeToggle: () async {
+                      final readerMode = ref.read(_currentReaderMode);
+                      if (!(readerMode?.isHorizontalContinuous ?? false)) {
+                        final currentEffective = effectivePageMode;
+                        final currentActual = getCurrentPagesActualIndex(
+                          currentEffective,
+                        );
+                        final PageMode newPageMode =
+                            currentEffective == PageMode.onePage
+                            ? PageMode.doublePage
+                            : PageMode.onePage;
+                        ref.read(doublePageAutoStateProvider.notifier).set(false);
+                        _readerController.setPageMode(newPageMode);
+
+                        final singleFirst = ref.read(
+                          doublePageSingleFirstPageStateProvider,
+                        );
+                        final int targetIndex = newPageMode == PageMode.doublePage
+                            ? ReaderPageIndexMath(
+                                isDoublePageActive: true,
+                                singleFirst: singleFirst,
+                                pageCount: pages.length,
+                                pages: pages,
+                              ).actualToPageViewIndex(currentActual)
+                            : currentActual;
+
+                        _currentIndex = targetIndex;
+                        _currentPageViewIndex.value = targetIndex;
+                        if (mounted) {
                           setState(() {
-                            isCurrentPageZoomed = zoomed;
+                            _pageMode = newPageMode;
+                            _lastEffectivePageMode = newPageMode;
                           });
                         }
-                      }
-                    },
-                    onDoublePageControllerChanged:
-                        (index, controller, attached) {
-                          if (attached) {
-                            doublePageControllers[index] = controller;
-                          } else if (identical(
-                            doublePageControllers[index],
-                            controller,
-                          )) {
-                            // A spread rebuilt under a new key registers its
-                            // controller before the old one is disposed; only
-                            // drop the entry if it is still the disposed one's.
-                            doublePageControllers.remove(index);
-                          }
-                        },
-                    onPageChanged: _onPageChanged,
-                  ),
-                ),
-                ValueListenableBuilder<bool>(
-                  valueListenable: _hasCurrentPageImageError,
-                  builder: (context, hasCurrentError, child) {
-                    return ReaderOverlays(
-                      isReverseHorizontal: _isReverseHorizontal,
-                      hasCurrentPageImageError: hasCurrentError,
-                      isContinuousMode: readerMode.isContinuous,
-                      onToggleUI: _isViewFunction,
-                      onPreviousPage: () {
-                        if (isCurrentPageZoomed &&
-                            doublePageControllers[_currentIndex] != null) {
-                          handlePreviousPageZoomed();
-                        } else {
-                          handlePageNavigation(forward: false);
-                        }
-                      },
-                      onNextPage: () {
-                        if (isCurrentPageZoomed &&
-                            doublePageControllers[_currentIndex] != null) {
-                          handleNextPageZoomed();
-                        } else {
-                          handlePageNavigation(forward: true);
-                        }
-                      },
-                      isFlashing: isFlashing,
-                      flashOverlayColor: flashOverlayColor,
-                      showNavigationOverlay: showNavigationOverlay,
-                      onCloseNavigationOverlay: () {
-                        setState(() {
-                          showNavigationOverlay = false;
-                        });
-                      },
-                    );
-                  },
-                ),
-                // On desktop, a pointer reaching the top or bottom edge
-                // brings the bars back. Translucent: the page still takes
-                // the clicks under them.
-                if (isDesktop && !_isView) ...[
-                  for (final top in [true, false])
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      top: top ? 0 : null,
-                      bottom: top ? null : 0,
-                      height: 40,
-                      child: MouseRegion(
-                        hitTestBehavior: HitTestBehavior.translucent,
-                        onEnter: (_) {
-                          if (!_isView) _isViewFunction();
-                        },
-                      ),
-                    ),
-                ],
-                ReaderAppBar(
-                  chapter: chapter,
-                  mangaName: _readerController.getMangaName(),
-                  // Named as in the series' own list.
-                  chapterTitle: chapterDisplayName(
-                    chapter,
-                    _readerController.getManga(),
-                    context.l10n,
-                    byNumber: ref.watch(
-                      chapterNumberDisplayProvider.select(
-                        (ids) => ids.contains(_readerController.getManga().id),
-                      ),
-                    ),
-                  ),
-                  isVisible: _isView,
-                  isBookmarked: _isBookmarked,
-                  backgroundColor: _backgroundColor,
-                  // In the bottom panel, within reach.
-                  showChapterList: false,
-                  onBackPressed: () => Navigator.pop(context),
-                  onBookmarkPressed: () {
-                    _readerController.setChapterBookmarked();
-                    setState(() {
-                      _isBookmarked = !_isBookmarked;
-                    });
-                  },
-                  onWebViewPressed:
-                      (chapter.manga.value!.isLocalArchive ?? false) == false
-                      ? () {
-                          final data = buildWebViewData(chapter);
-                          if (data != null) {
-                            context.push("/mangawebview", extra: data);
-                          }
-                        }
-                      : null,
-                  onRefreshPressed:
-                      (chapter.manga.value!.isLocalArchive ?? false) == false
-                      ? () async {
-                          // Drop the cached page list first: rebuilding the
-                          // reader reads it, and a list left in place would be
-                          // reused as-is.
-                          await ChapterCache().remove(chapter);
-                          ref.invalidate(
-                            getChapterPagesProvider(chapter: chapter),
+
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (!mounted) return;
+                          navigationService.jumpToPage(
+                            index: targetIndex,
+                            readerMode: ref.read(_currentReaderMode)!,
                           );
-                          if (chapter.id != null) {
-                            ref.invalidate(mangaReaderProvider(chapter.id!));
-                          }
-                          if (context.mounted) {
-                            pushReplacementMangaReaderView(
-                              chapter: chapter,
-                              context: context,
-                            );
-                          }
-                        }
-                      : null,
-                ),
-                ReaderBottomBar(
-                  chapter: chapter,
-                  isVisible: _isView,
-                  hasPreviousChapter: _readerController.hasPreviousChapter,
-                  hasNextChapter: _readerController.hasNextChapter,
-                  onPreviousChapter: () => _goToChapter(false),
-                  onNextChapter: () => _goToChapter(true),
-                  onSliderChanged: (value, ref) {
-                    _sliderPreviewIndex.value = value;
-                    _currentPageDisplayIndex.value = value;
-                    ref
-                        .read(currentIndexProvider(chapter).notifier)
-                        .setCurrentIndex(value);
-                  },
-                  onSliderChangeEnd: (value) {
-                    _sliderPreviewIndex.value = null;
-                    // Looked up rather than read from the page's pageIndex,
-                    // which goes stale once a wide page before it is split.
-                    int jumpIndex = actualIndexOfChapterPage(value);
-                    if (jumpIndex == -1) return;
-                    // In double page mode, convert array index to page view index
-                    if (isDoublePageActive) {
-                      jumpIndex = actualToPageViewIndex(jumpIndex);
-                    }
-                    _currentIndex = jumpIndex;
-                    _currentPageViewIndex.value = jumpIndex;
-                    navigationService.jumpToPage(
-                      index: jumpIndex,
-                      readerMode: ref.read(_currentReaderMode)!,
-                    );
-                  },
-                  onReaderModeChanged: (mode, ref) {
-                    ref.read(_currentReaderMode.notifier).state = mode;
-                    _setReaderMode(mode, ref, fromUser: true);
-                  },
-                  onPageModeToggle: () async {
-                    final readerMode = ref.read(_currentReaderMode);
-                    if (!(readerMode?.isHorizontalContinuous ?? false)) {
-                      final currentEffective = effectivePageMode;
-                      final currentActual = getCurrentPagesActualIndex(
-                        currentEffective,
-                      );
-                      final PageMode newPageMode =
-                          currentEffective == PageMode.onePage
-                          ? PageMode.doublePage
-                          : PageMode.onePage;
-                      ref.read(doublePageAutoStateProvider.notifier).set(false);
-                      _readerController.setPageMode(newPageMode);
-
-                      final singleFirst = ref.read(
-                        doublePageSingleFirstPageStateProvider,
-                      );
-                      final int targetIndex = newPageMode == PageMode.doublePage
-                          ? ReaderPageIndexMath(
-                              isDoublePageActive: true,
-                              singleFirst: singleFirst,
-                              pageCount: pages.length,
-                              pages: pages,
-                            ).actualToPageViewIndex(currentActual)
-                          : currentActual;
-
-                      _currentIndex = targetIndex;
-                      _currentPageViewIndex.value = targetIndex;
-                      if (mounted) {
-                        setState(() {
-                          _pageMode = newPageMode;
-                          _lastEffectivePageMode = newPageMode;
                         });
                       }
-
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (!mounted) return;
-                        navigationService.jumpToPage(
-                          index: targetIndex,
-                          readerMode: ref.read(_currentReaderMode)!,
+                    },
+                    onSettingsPressed: () => ReaderSettingsModal.show(
+                      context: context,
+                      vsync: this,
+                      currentReaderModeProvider: _currentReaderMode,
+                      autoScroll: _autoScroll,
+                      autoScrollPage: _autoScrollPage,
+                      pageOffset: _pageOffset,
+                      onAutoPageScroll: _autoPagescroll,
+                      seriesName: _readerController.getManga().name ?? '',
+                      onReaderModeChanged: (mode, widgetRef) {
+                        widgetRef.read(_currentReaderMode.notifier).state = mode;
+                        _setReaderMode(mode, widgetRef, fromUser: true);
+                      },
+                      onAutoScrollSave: (enabled, offset) {
+                        _readerController.setAutoScroll(enabled, offset);
+                      },
+                      onFullScreenToggle: () {
+                        final fullScreen = ref.read(
+                          fullScreenReaderStateProvider,
                         );
-                      });
-                    }
-                  },
-                  onSettingsPressed: () => ReaderSettingsModal.show(
-                    context: context,
-                    vsync: this,
+                        _setFullScreen(value: !fullScreen);
+                      },
+                    ),
                     currentReaderModeProvider: _currentReaderMode,
-                    autoScroll: _autoScroll,
-                    autoScrollPage: _autoScrollPage,
-                    pageOffset: _pageOffset,
-                    onAutoPageScroll: _autoPagescroll,
-                    seriesName: _readerController.getManga().name ?? '',
-                    onReaderModeChanged: (mode, widgetRef) {
-                      widgetRef.read(_currentReaderMode.notifier).state = mode;
-                      _setReaderMode(mode, widgetRef, fromUser: true);
-                    },
-                    onAutoScrollSave: (enabled, offset) {
-                      _readerController.setAutoScroll(enabled, offset);
-                    },
-                    onFullScreenToggle: () {
-                      final fullScreen = ref.read(
-                        fullScreenReaderStateProvider,
-                      );
-                      _setFullScreen(value: !fullScreen);
-                    },
-                  ),
-                  currentReaderModeProvider: _currentReaderMode,
-                  currentPageListenable: _currentPageDisplayIndex,
-                  currentPageMode: currentEffectivePageMode,
-                  isReverseHorizontal: _isReverseHorizontal,
-                  totalPages: _readerController.getCachedPageLength(
-                    _chapterUrlModel.pageUrls,
-                  ),
-                  currentIndexLabel: currentIndexLabel,
-                  backgroundColor: _backgroundColor,
-                  autoScrollEnabled: _autoScrollPage,
-                  onAutoScrollPressed: _showAutoScrollSheet,
-                ),
-                // The page under the slider while it is dragged.
-                ReaderSliderPreviewOverlay(
-                  sliderPreviewIndex: _sliderPreviewIndex,
-                  isUiVisible: _isView,
-                  pages: pages,
-                  totalPages: _readerController.getCachedPageLength(
-                    _chapterUrlModel.pageUrls,
-                  ),
-                  isReverseHorizontal: _isReverseHorizontal,
-                  actualIndexOfChapterPage: actualIndexOfChapterPage,
-                  currentIndexLabel: currentIndexLabel,
-                ),
-                RepaintBoundary(
-                  child: PageIndicator(
-                    isUiVisible: _isView,
                     currentPageListenable: _currentPageDisplayIndex,
+                    currentPageMode: currentEffectivePageMode,
+                    isReverseHorizontal: _isReverseHorizontal,
                     totalPages: _readerController.getCachedPageLength(
                       _chapterUrlModel.pageUrls,
                     ),
-                    formatCurrentIndex: currentIndexLabel,
+                    currentIndexLabel: currentIndexLabel,
+                    backgroundColor: _backgroundColor,
+                    autoScrollEnabled: _autoScrollPage,
+                    onAutoScrollPressed: _showAutoScrollSheet,
                   ),
-                ),
-                // As a chapter opens, which way it reads: the reading mode's
-                // name for a moment, the series keeping a mode of its own.
-                Positioned(
-                  top: MediaQuery.paddingOf(context).top + ShioriSpace.s16,
-                  left: 0,
-                  right: 0,
-                  child: IgnorePointer(
-                    child: Center(
-                      child: AnimatedOpacity(
-                        opacity: _showModeHint && !_isView ? 1 : 0,
-                        duration: ShioriMotion.of(
-                          context,
-                          ShioriMotion.standard,
-                        ),
-                        child: ShioriOverlayLabel(
-                          getReaderModeName(readerMode, context),
+                  // The page under the slider while it is dragged.
+                  ReaderSliderPreviewOverlay(
+                    sliderPreviewIndex: _sliderPreviewIndex,
+                    isUiVisible: _isView,
+                    pages: pages,
+                    totalPages: _readerController.getCachedPageLength(
+                      _chapterUrlModel.pageUrls,
+                    ),
+                    isReverseHorizontal: _isReverseHorizontal,
+                    actualIndexOfChapterPage: actualIndexOfChapterPage,
+                    currentIndexLabel: currentIndexLabel,
+                  ),
+                  RepaintBoundary(
+                    child: PageIndicator(
+                      isUiVisible: _isView,
+                      currentPageListenable: _currentPageDisplayIndex,
+                      totalPages: _readerController.getCachedPageLength(
+                        _chapterUrlModel.pageUrls,
+                      ),
+                      formatCurrentIndex: currentIndexLabel,
+                    ),
+                  ),
+                  // As a chapter opens, which way it reads: the reading mode's
+                  // name for a moment, the series keeping a mode of its own.
+                  Positioned(
+                    top: MediaQuery.paddingOf(context).top + ShioriSpace.s16,
+                    left: 0,
+                    right: 0,
+                    child: IgnorePointer(
+                      child: Center(
+                        child: AnimatedOpacity(
+                          opacity: _showModeHint && !_isView ? 1 : 0,
+                          duration: ShioriMotion.of(
+                            context,
+                            ShioriMotion.standard,
+                          ),
+                          child: ShioriOverlayLabel(
+                            getReaderModeName(readerMode, context),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                ReaderAutoScrollButton(
-                  isContinuousMode: readerMode.isContinuous,
-                  isUiVisible: _isView,
-                  autoScrollPage: _autoScrollPage,
-                  autoScroll: _autoScroll,
-                  onToggle: () {
-                    _autoScroll.value = !_autoScroll.value;
-                  },
-                ),
-              ],
+                  ReaderAutoScrollButton(
+                    isContinuousMode: readerMode.isContinuous,
+                    isUiVisible: _isView,
+                    autoScrollPage: _autoScrollPage,
+                    autoScroll: _autoScroll,
+                    onToggle: () {
+                      _autoScroll.value = !_autoScroll.value;
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         ),
