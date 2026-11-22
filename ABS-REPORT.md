@@ -38,7 +38,8 @@ No `pubspec.yaml`, arb, CI, manga/anime/novel/reader changes. No new dependencie
 
 ## API surface used
 
-`GET /api/ping`, `GET /api/me`, `GET /api/libraries`,
+`GET /ping` (public root route; `/api/ping` does not exist on ABS 2.37.2),
+`GET /api/me`, `GET /api/libraries`,
 `GET /api/libraries/{id}/items` (`limit`, `page`, `sort=media.metadata.title`, `minified=1`),
 `GET /api/items/{id}`, `POST /api/items/{id}/play`,
 `PATCH /api/me/progress/{itemId}`, `GET /api/items/{id}/cover`.

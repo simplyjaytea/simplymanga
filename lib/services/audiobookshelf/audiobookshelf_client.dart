@@ -106,9 +106,11 @@ class AudiobookshelfClient {
     return base.replace(path: '$prefix$suffix', queryParameters: query);
   }
 
-  /// `GET /api/ping`: reachability only, no token involved.
+  /// `GET /ping`: reachability only, no token involved. The route is at the
+  /// server root, not under `/api`: ABS (verified on 2.37.2) has no
+  /// `/api/ping`, and its auth middleware answers 401 for that unknown path.
   Future<void> ping() async {
-    final uri = _uri('/api/ping');
+    final uri = _uri('/ping');
     final response = await _run(() => _http.get(uri), uri);
     _ensureOk(response, uri);
     final body = _decode(response);

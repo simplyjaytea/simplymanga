@@ -94,7 +94,7 @@ void main() {
       _app(
         store: _MemoryStore(),
         handler: (request) async => switch (request.url.path) {
-          '/api/ping' => _json({'success': true}),
+          '/ping' => _json({'success': true}),
           '/api/me' => _json({'id': 'u1', 'username': 'ada'}),
           _ => _json({}, 404),
         },
@@ -118,7 +118,7 @@ void main() {
     await tester.pumpWidget(
       _app(
         store: _MemoryStore(),
-        handler: (request) async => request.url.path == '/api/ping'
+        handler: (request) async => request.url.path == '/ping'
             ? _json({'success': true})
             : _json({'error': 'Unauthorized'}, 401),
       ),

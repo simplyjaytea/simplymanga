@@ -116,7 +116,11 @@ void main() {
       expect(user.email, 'ada@example.com');
     });
 
-    test('ping does not require a token, and surfaces reachability', () async {
+    test('ping uses the public /ping route, without a token', () async {
+      // Regression: ABS 2.37.2 has no /api/ping. Its auth middleware answers
+      // 401 for that unknown path even with a valid token, so a reachability
+      // probe there fails every connection test. The public route is root
+      // /ping, verified live against advplyr/audiobookshelf:2.37.2.
       late http.Request captured;
       final client = _client((request) async {
         captured = request;
@@ -125,7 +129,7 @@ void main() {
 
       await client.ping();
 
-      expect(captured.url.path, '/api/ping');
+      expect(captured.url.path, '/ping');
       expect(captured.headers.containsKey('authorization'), isFalse);
     });
 
