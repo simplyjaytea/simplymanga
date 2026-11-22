@@ -11,6 +11,7 @@ on:
       - 'packages/**'
       - 'rust/**'
       - 'rust_builder/**'
+      - 'server/**'
       - 'assets/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
@@ -22,6 +23,7 @@ on:
       - 'packages/**'
       - 'rust/**'
       - 'rust_builder/**'
+      - 'server/**'
       - 'assets/**'
       - 'pubspec.yaml'
       - 'pubspec.lock'
@@ -60,6 +62,24 @@ jobs:
       - name: SSIV native decoder headers (PNG/JPEG)
         run: sudo apt-get update && sudo apt-get install -y libpng-dev libjpeg-dev
       - run: flutter test
+      # Sync-server protocol suite (server/): mutual-TLS pairing, restart
+      # persistence, revocation. Needs its own Rust native lib; the restart
+      # test carries an explicit 2-minute timeout for parallel runner load.
+      - name: Cache sync-server native build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            server/native/target
+          key: sync-native-${{ runner.os }}-${{ hashFiles('server/native/Cargo.lock', 'rust/sync_host/Cargo.toml', 'rust/sync_host/src/**') }}
+          restore-keys: sync-native-${{ runner.os }}-
+      - name: Sync-server tests
+        working-directory: server
+        run: |
+          (cd native && cargo build --release)
+          dart pub get
+          dart test
 
   build-ios:
     name: Unsigned .ipa (macOS)
